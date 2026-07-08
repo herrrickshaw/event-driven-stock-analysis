@@ -1,0 +1,612 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+
+jobs:
+  # ============================================================================
+  # UNIT TESTS
+  # ============================================================================
+  test-backend:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-mock
+
+      - name: Run pytest with coverage
+        run: |
+          pytest tests/backend \
+            --cov=backend \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results/backend.xml \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: matrix.python-version == '3.11'
+        with:
+          files: ./coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: backend-test-results-${{ matrix.python-version }}
+          path: test-results/
+
+  test-frontend:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18.x', '20.x']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Jest tests with coverage
+        working-directory: ./frontend
+        run: |
+          npm test -- \
+            --coverage \
+            --testPathPattern=src \
+            --collectCoverageFrom="src/**/*.{js,jsx}" \
+            --collectCoverageFrom="!src/index.js" \
+            --collectCoverageFrom="!src/reportWebVitals.js"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: matrix.node-version == '20.x'
+        with:
+          files: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: frontend-test-results-${{ matrix.node-version }}
+          path: frontend/coverage/
+
+  # ============================================================================
+  # LINTING & CODE QUALITY
+  # ============================================================================
+  lint-backend:
+    name: Backend Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 pylint black isort bandit[toml]
+
+      - name: Run Black (code formatting check)
+        run: black --check backend/
+
+      - name: Run isort (import sorting check)
+        run: isort --check-only backend/
+
+      - name: Run Flake8
+        run: |
+          flake8 backend/ \
+            --max-line-length=120 \
+            --extend-ignore=E203,W503 \
+            --exclude=__pycache__,venv \
+            --count \
+            --statistics
+
+      - name: Run Pylint
+        continue-on-error: true
+        run: |
+          pylint backend/ \
+            --max-line-length=120 \
+            --disable=C0111,R0913,R0914 \
+            --exit-zero
+
+      - name: Run Bandit (security checks)
+        continue-on-error: true
+        run: bandit -r backend/ -f json -o bandit-report.json
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: bandit-security-report
+          path: bandit-report.json
+
+  lint-frontend:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: npx eslint src/ --format json --output-file eslint-report.json || true
+
+      - name: Run Prettier (code formatting check)
+        working-directory: ./frontend
+        run: npx prettier --check src/
+
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: eslint-report
+          path: frontend/eslint-report.json
+
+  # ============================================================================
+  # BUILD DOCKER IMAGES
+  # ============================================================================
+  determine-version:
+    name: Determine Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      image-tag: ${{ steps.semver.outputs.image-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate semantic version
+        id: semver
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            IMAGE_TAG=$VERSION
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            VERSION=$(git describe --tags --always --dirty)
+            COMMIT_SHORT=$(git rev-parse --short HEAD)
+            IMAGE_TAG="latest-${COMMIT_SHORT}"
+          else
+            COMMIT_SHORT=$(git rev-parse --short HEAD)
+            VERSION="0.0.0-pr-${GITHUB_RUN_NUMBER}-${COMMIT_SHORT}"
+            IMAGE_TAG="${GITHUB_HEAD_REF}-${COMMIT_SHORT}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}, Tag: ${IMAGE_TAG}"
+
+  build-backend:
+    name: Build Backend Docker Image
+    runs-on: ubuntu-latest
+    needs: [test-backend, lint-backend, determine-version]
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}},value=${{ needs.determine-version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.determine-version.outputs.version }}
+            type=sha,prefix=${{ needs.determine-version.outputs.image-tag }}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Backend image
+        id: build
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.determine-version.outputs.version }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+
+  build-frontend:
+    name: Build Frontend Docker Image
+    runs-on: ubuntu-latest
+    needs: [test-frontend, lint-frontend, determine-version]
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}},value=${{ needs.determine-version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.determine-version.outputs.version }}
+            type=sha,prefix=${{ needs.determine-version.outputs.image-tag }}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Frontend image
+        id: build
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./Dockerfile.frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.determine-version.outputs.version }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+
+  # ============================================================================
+  # SECURITY SCANNING
+  # ============================================================================
+  scan-images:
+    name: Scan Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Run Trivy vulnerability scanner - Backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build-backend.outputs.image }}
+          format: 'sarif'
+          output: 'trivy-backend.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy vulnerability scanner - Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build-frontend.outputs.image }}
+          format: 'sarif'
+          output: 'trivy-frontend.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: trivy-*.sarif
+
+  # ============================================================================
+  # DEPLOYMENT - STAGING (to main branch)
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend, scan-images]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.event-stock-analysis.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Update Kubernetes manifests with new image tags
+        run: |
+          cd k8s/overlays/staging
+          kustomize edit set image \
+            backend=${{ needs.build-backend.outputs.image }} \
+            frontend=${{ needs.build-frontend.outputs.image }}
+
+      - name: Deploy to Staging
+        run: |
+          kubectl apply -k k8s/overlays/staging
+          kubectl rollout status deployment/backend-deployment -n staging --timeout=5m
+          kubectl rollout status deployment/frontend-deployment -n staging --timeout=5m
+
+      - name: Run health checks
+        run: |
+          BACKEND_URL="http://backend-service.staging.svc.cluster.local:8000/health"
+          FRONTEND_URL="http://frontend-service.staging.svc.cluster.local:3000/health"
+
+          for i in {1..30}; do
+            if kubectl run health-check --rm -i --restart=Never --image=curlimages/curl -- \
+              curl -f "$BACKEND_URL" && echo "Backend healthy"; then
+              break
+            fi
+            sleep 2
+          done
+
+  # ============================================================================
+  # DEPLOYMENT - PRODUCTION (Canary Rollout)
+  # ============================================================================
+  deploy-production-canary:
+    name: Deploy to Production (Canary)
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend, scan-images]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://event-stock-analysis.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Apply production base manifests
+        run: |
+          kubectl apply -k k8s/overlays/production/base
+
+      - name: Update image tags in canary deployment
+        run: |
+          cd k8s/overlays/production/canary
+          kustomize edit set image \
+            backend=${{ needs.build-backend.outputs.image }} \
+            frontend=${{ needs.build-frontend.outputs.image }}
+
+      - name: Deploy Canary (10%)
+        run: |
+          echo "Deploying canary with 10% traffic..."
+          kubectl apply -k k8s/overlays/production/canary
+          kubectl scale deployment backend-canary -n production --replicas=1
+          kubectl scale deployment frontend-canary -n production --replicas=1
+
+      - name: Wait for canary pods to be ready
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -l app=backend,version=canary \
+            -n production --timeout=300s
+          kubectl wait --for=condition=ready pod \
+            -l app=frontend,version=canary \
+            -n production --timeout=300s
+
+      - name: Health check - Canary Backend
+        run: |
+          kubectl run health-check --rm -i --restart=Never --image=curlimages/curl -- \
+            curl -f "http://backend-canary.production.svc.cluster.local:8000/health" || exit 1
+
+      - name: Health check - Canary Frontend
+        run: |
+          kubectl run health-check --rm -i --restart=Never --image=curlimages/curl -- \
+            curl -f "http://frontend-canary.production.svc.cluster.local:3000/health" || exit 1
+
+      - name: Smoke tests on Canary
+        run: |
+          kubectl run smoke-tests --rm -i --restart=Never \
+            --image=${{ needs.build-backend.outputs.image }} -- \
+            python -m pytest tests/smoke --markers=smoke -v
+
+      - name: Scale to 50% traffic
+        if: success()
+        run: |
+          echo "Scaling canary to 50% traffic..."
+          kubectl scale deployment backend-canary -n production --replicas=2
+          kubectl scale deployment frontend-canary -n production --replicas=2
+          sleep 60
+
+      - name: Health check - 50% Canary
+        if: success()
+        run: |
+          kubectl run health-check --rm -i --restart=Never --image=curlimages/curl -- \
+            curl -f "http://backend-canary.production.svc.cluster.local:8000/health" || exit 1
+
+      - name: Scale to 100% (Full Rollout)
+        if: success()
+        run: |
+          echo "Scaling canary to 100% traffic..."
+          kubectl scale deployment backend-canary -n production --replicas=5
+          kubectl scale deployment frontend-canary -n production --replicas=5
+          kubectl patch deployment backend-stable -n production -p '{"spec": {"replicas": 0}}'
+          kubectl patch deployment frontend-stable -n production -p '{"spec": {"replicas": 0}}'
+
+          # Rename canary to stable
+          kubectl scale deployment backend-canary -n production --replicas=0
+          kubectl scale deployment frontend-canary -n production --replicas=0
+
+      - name: Verify 100% Rollout
+        if: success()
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -l app=backend \
+            -n production --timeout=300s
+          kubectl wait --for=condition=ready pod \
+            -l app=frontend \
+            -n production --timeout=300s
+
+      - name: Post-deployment health checks
+        if: success()
+        run: |
+          for i in {1..10}; do
+            echo "Health check $i..."
+            kubectl run health-check-$i --rm -i --restart=Never --image=curlimages/curl -- \
+              curl -f "http://backend-service.production.svc.cluster.local:8000/health" || exit 1
+            sleep 5
+          done
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          kubectl scale deployment backend-canary -n production --replicas=0
+          kubectl scale deployment frontend-canary -n production --replicas=0
+          kubectl scale deployment backend-stable -n production --replicas=5
+          kubectl scale deployment frontend-stable -n production --replicas=5
+          exit 1
+
+  # ============================================================================
+  # POST-DEPLOYMENT NOTIFICATIONS
+  # ============================================================================
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production-canary]
+    if: always()
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [[ "${{ needs.deploy-staging.result }}" == "failure" ]] || \
+             [[ "${{ needs.deploy-production-canary.result }}" == "failure" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Deployment Status: ${{ steps.status.outputs.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Event-Driven Stock Analysis - Deployment Report*\n*Status:* ${{ steps.status.outputs.status }}\n*Ref:* ${{ github.ref }}\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Staging*\n${{ needs.deploy-staging.result }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Production*\n${{ needs.deploy-production-canary.result }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

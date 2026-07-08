@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "created": "2026-07-08T05:54:31.687376",
+  "markets": [
+    "india",
+    "usa",
+    "europe",
+    "japan",
+    "korea",
+    "uk",
+    "brazil",
+    "china"
+  ],
+  "total_stocks": 2200,
+  "total_records": 391600,
+  "columns": [
+    "date",
+    "market",
+    "ticker",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume"
+  ],
+  "date_range": {
+    "start": "2023-02-06",
+    "end": "2023-10-11"
+  }
+}
