@@ -1,7 +1,7 @@
 """
 Risk metrics and analysis ORM models.
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
@@ -19,7 +19,7 @@ class RiskMetric(Base):
     calculated_at = Column(DateTime, default=datetime.utcnow)
     lookback_period = Column(Integer, default=252)  # trading days
 
-    __table_args__ = ({"indexes": [("portfolio_id", "metric_type")]},)
+    __table_args__ = (Index("ix_risk_metrics_portfolio_metric_type", "portfolio_id", "metric_type"),)
 
 
 class Exposure(Base):

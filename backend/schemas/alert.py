@@ -6,19 +6,6 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 
-class AlertStatusResponse(BaseModel):
-    """Status of all active alerts for a portfolio."""
-
-    portfolio_id: int
-    total_alerts: int
-    active_alerts: int
-    triggered_alerts: int
-    critical_alerts: int
-    warning_alerts: int
-    alerts: List["AlertDetail"] = []
-    last_checked: datetime
-
-
 class AlertDetail(BaseModel):
     """Detailed alert information."""
 
@@ -30,11 +17,31 @@ class AlertDetail(BaseModel):
     last_triggered: Optional[datetime] = None
 
 
+class AlertStatusResponse(BaseModel):
+    """Status of all active alerts for a portfolio."""
+
+    portfolio_id: int
+    total_alerts: int
+    active_alerts: int
+    triggered_alerts: int
+    critical_alerts: int
+    warning_alerts: int
+    alerts: List[AlertDetail] = []
+    last_checked: datetime
+
+
 class AlertTriggerRequest(BaseModel):
     """Request to manually trigger an alert check."""
 
     portfolio_id: int
     alert_types: Optional[List[str]] = None  # Specific alerts to check
+
+
+class WatchlistAddRequest(BaseModel):
+    """Request to add tickers to the live (EventBus) watchlist."""
+
+    tickers: List[str]
+    market: str = "india"
 
 
 class TriggeredAlert(BaseModel):

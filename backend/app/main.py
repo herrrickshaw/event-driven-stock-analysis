@@ -43,12 +43,14 @@ def create_app() -> FastAPI:
     init_db()
     logger.info("Database initialized")
 
-    # Register routers
-    app.include_router(portfolio.router, prefix=settings.api_prefix)
-    app.include_router(risk.router, prefix=settings.api_prefix)
-    app.include_router(rebalance.router, prefix=settings.api_prefix)
-    app.include_router(alerts.router, prefix=settings.api_prefix)
-    app.include_router(reports.router, prefix=settings.api_prefix)
+    # Register routers. Each router already declares its full path prefix
+    # (e.g. "/api/alerts"), so no additional prefix is added here -- doing so
+    # previously double-prefixed every route to "/api/api/...".
+    app.include_router(portfolio.router)
+    app.include_router(risk.router)
+    app.include_router(rebalance.router)
+    app.include_router(alerts.router)
+    app.include_router(reports.router)
 
     logger.info("API routers registered")
 

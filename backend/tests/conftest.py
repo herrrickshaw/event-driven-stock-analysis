@@ -19,6 +19,7 @@ from typing import Generator, Dict, Any, List
 from unittest import mock
 
 import pytest
+import pytest_asyncio
 import pytz
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
@@ -571,7 +572,7 @@ def sample_excel_file(test_data_dir, sample_portfolio_india) -> Path:
 # Event Bus Fixtures
 # ──────────────────────────────────────────────────────────────────────────────
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def event_bus():
     """Fresh EventBus instance for each test."""
     from events.event_bus import EventBus
