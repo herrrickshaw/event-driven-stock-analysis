@@ -1,5 +1,7 @@
 # Event-Driven Stock Analysis Platform
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/herrrickshaw/event-driven-stock-analysis/blob/main/notebooks/colab_test.ipynb)
+
 **Global Multi-Market Portfolio Analysis & Rebalancing Optimization**
 
 ## Overview
