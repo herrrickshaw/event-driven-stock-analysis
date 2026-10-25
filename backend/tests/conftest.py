@@ -612,3 +612,72 @@ def pytest_configure(config):
     config.addinivalue_line('markers', 'unit: marks tests as unit tests')
     config.addinivalue_line('markers', 'load: marks tests as load tests')
     config.addinivalue_line('markers', 'data_quality: marks tests as data quality tests')
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SQLite-backed DB fixtures (no Postgres needed) — used by tests/unit and
+# tests/integration, which referenced db_session/sample_portfolio/client
+# fixtures that did not exist.
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def db_session():
+    """Fresh in-memory SQLite session with the ORM schema."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+    from models import Base
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
+                           poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    try:
+        yield session
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@pytest.fixture
+def sample_portfolio(db_session):
+    from models import Portfolio
+    p = Portfolio(name="Test Portfolio", user_id="u1", currency="USD")
+    db_session.add(p)
+    db_session.commit()
+    return p
+
+
+@pytest.fixture
+def sample_holdings(db_session, sample_portfolio):
+    from decimal import Decimal
+    from models import Holding
+    hs = [Holding(portfolio_id=sample_portfolio.id, symbol=s, market="us",
+                  quantity=Decimal("10"), purchase_price=Decimal(pp),
+                  current_price=Decimal(cp), weight=50.0)
+          for s, pp, cp in (("AAPL", "150.00", "180.00"), ("GOOGL", "120.00", "130.00"))]
+    db_session.add_all(hs)
+    db_session.commit()
+    return hs
+
+
+@pytest.fixture
+def client(db_session, monkeypatch):
+    """TestClient on the real app with get_db overridden to SQLite.
+    create_app() calls init_db() against settings.database_url (Postgres);
+    that is replaced with a no-op so tests never touch a real database."""
+    import importlib
+    import models
+    from models import get_db
+
+    # app/main.py also runs `app = create_app()` at import time, so the no-op
+    # must be in place before the first import.
+    monkeypatch.setattr(models, "init_db", lambda: None)
+    app_main = importlib.import_module("app.main")
+    monkeypatch.setattr(app_main, "init_db", lambda: None)
+    app = app_main.create_app()
+
+    def _db():
+        yield db_session
+    app.dependency_overrides[get_db] = _db
+    return TestClient(app, raise_server_exceptions=False)
