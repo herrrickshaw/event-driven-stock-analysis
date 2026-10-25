@@ -262,6 +262,9 @@ class DataQualityValidator:
     def compute_metrics(df, price_col='Close', volume_col='Volume') -> DataQualityMetrics:
         """Compute quality metrics for a DataFrame"""
         total = len(df)
+        if total == 0:
+            # pct_change() on an empty Series raises in pandas 2.1
+            return DataQualityMetrics(0, 0, 0, 0, 0, 0, 0, 0)
 
         # Null values
         null_mask = df[[price_col, volume_col]].isnull().any(axis=1)
