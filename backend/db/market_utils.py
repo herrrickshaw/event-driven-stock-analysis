@@ -209,13 +209,19 @@ class CurrencyConverter:
         if from_currency == to_currency:
             return amount
 
-        if from_currency == 'USD':
-            # Reverse conversion
-            rate = cls._APPROXIMATE_RATES.get((to_currency, 'USD'))
-            return amount / rate if rate else amount
-        else:
-            rate = cls._APPROXIMATE_RATES.get((from_currency, to_currency))
-            return amount * rate if rate else amount
+        def to_usd_rate(cur: str) -> float:
+            if cur == 'USD':
+                return 1.0
+            rate = cls._APPROXIMATE_RATES.get((cur, 'USD'))
+            if rate is None:
+                # Returning the amount unconverted would silently price e.g.
+                # CHF as USD; refuse instead.
+                raise ValueError(f"No conversion rate for {cur}")
+            return rate
+
+        # Every pair goes through USD (the table only stores X->USD), so
+        # EUR->INR is EUR->USD->INR rather than an unconverted passthrough.
+        return amount * to_usd_rate(from_currency) / to_usd_rate(to_currency)
 
     @classmethod
     def normalize_prices(cls, prices_dict: Dict[str, float], currencies: Dict[str, str]) -> Dict[str, float]:
