@@ -496,8 +496,10 @@ class HistoricalDataFetcher:
         ]
 
         # Detect and remove outliers (price spikes > 500%)
-        df['pct_change'] = df['Close'].pct_change().abs()
-        df = df[df['pct_change'] <= VALIDATION_CONFIG['max_price_change_pct'] / 100]
+        # The first bar has no prior close (NaN change); keep it rather than
+        # letting `NaN <= limit` (False) silently drop every stock's oldest bar.
+        pct = df['Close'].pct_change().abs()
+        df = df[~(pct > VALIDATION_CONFIG['max_price_change_pct'] / 100)]
 
         # Volume validation
         df = df[df['Volume'] >= 0]
