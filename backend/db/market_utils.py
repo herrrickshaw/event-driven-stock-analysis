@@ -327,7 +327,7 @@ class MarketConfig:
         suffix = MarketConfig.TICKER_SUFFIXES.get(market, '')
 
         # Some tickers already have suffixes embedded
-        if any(ticker.endswith(s) for s in ['.NS', '.BO', '.L', '.DE', '.PA', '.T', '.KS', '.SS', '.SZ']):
+        if any(ticker.endswith(s) for s in ['.NS', '.BO', '.L', '.DE', '.PA', '.T', '.KS', '.KQ', '.SS', '.SZ']):
             return ticker
 
         if suffix and suffix != 'varies':
