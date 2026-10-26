@@ -48,6 +48,10 @@ class QuoteSnapshot:
     high_52w: Optional[float]
     low_52w: Optional[float]
     debt_to_equity: Optional[float]
+    open: Optional[float] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    close: Optional[float] = None
     last_updated: Optional[datetime] = None
     data_source: str = 'yfinance'
 
@@ -627,6 +631,10 @@ class CassandraClient:
                 high_52w=float(row['high_52w']) if row.get('high_52w') else None,
                 low_52w=float(row['low_52w']) if row.get('low_52w') else None,
                 debt_to_equity=float(row['debt_to_equity']) if row.get('debt_to_equity') else None,
+                open=float(row['open']) if row.get('open') else None,
+                high=float(row['high']) if row.get('high') else None,
+                low=float(row['low']) if row.get('low') else None,
+                close=float(row['close']) if row.get('close') else None,
                 last_updated=row.get('last_updated'),
                 data_source=row.get('data_source', 'yfinance'),
             )
@@ -720,6 +728,10 @@ class CassandraClient:
                     high_52w=float(row['high_52w']) if row.get('high_52w') else None,
                     low_52w=float(row['low_52w']) if row.get('low_52w') else None,
                     debt_to_equity=float(row['debt_to_equity']) if row.get('debt_to_equity') else None,
+                    open=float(row['open']) if row.get('open') else None,
+                    high=float(row['high']) if row.get('high') else None,
+                    low=float(row['low']) if row.get('low') else None,
+                    close=float(row['close']) if row.get('close') else None,
                     last_updated=row.get('last_updated'),
                 ))
 
@@ -796,9 +808,11 @@ class CassandraClient:
                 instruments.append(Instrument(
                     market=row['market'],
                     yf_ticker=row['yf_ticker'],
-                    name=row['name'],
+                    name=row.get('name') or row.get('name_lower', ''),
                     symbol=row['symbol'],
+                    isin=row.get('isin'),
                     exchange=row['exchange'],
+                    country=row.get('country', ''),
                 ))
 
             logger.info(f"Found {len(instruments)} instruments for symbol={symbol}")
@@ -820,9 +834,11 @@ class CassandraClient:
                 instruments.append(Instrument(
                     market=row['market'],
                     yf_ticker=row['yf_ticker'],
-                    name=row['name'],
+                    name=row.get('name') or row.get('name_lower', ''),
                     symbol=row['symbol'],
+                    isin=row.get('isin'),
                     exchange=row['exchange'],
+                    country=row.get('country', ''),
                 ))
 
             logger.info(f"Found {len(instruments)} instruments for name prefix={name_prefix}")
