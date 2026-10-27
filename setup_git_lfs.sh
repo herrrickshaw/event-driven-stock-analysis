@@ -141,6 +141,7 @@ ratio = (1 - comp_size/orig_size) * 100
 
 print(f"Saved compressed:    {gz_path}")
 print(f"Size: {comp_size:.2f} MB (saved {ratio:.1f}%)")
+os.remove(csv_path)  # Remove uncompressed (the .gz is the committed copy)
 
 # Save per-market compressed files
 print("\nCompressing per-market data...")
