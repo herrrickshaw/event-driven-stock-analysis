@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+extend-exclude = ["frontend", "notebooks", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+# Pre-existing style choices left for Phase 2: long banner/comment lines, unicode log glyphs.
+ignore = ["E501", "RUF001"]
