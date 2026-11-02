@@ -241,7 +241,7 @@ def setup_logging(level=logging.INFO):
     )
     return logging.getLogger(__name__)
 
-logger = setup_logging()
+logger = logging.getLogger(__name__)  # handlers are installed by setup_logging() in main()
 
 
 # ═════════════════════════════════════════════════════════════════════════════

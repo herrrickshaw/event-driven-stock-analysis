@@ -1,4 +1,5 @@
 """OHLCV cleaning, retry back-off and fetcher retry logic -- fully offline."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -88,3 +89,21 @@ def test_fetcher_empty_frame_returns_none():
 
     fetcher = HistoricalDataFetcher(None, "usa", download=lambda t, **k: pd.DataFrame(), sleep=lambda s: None)
     assert fetcher.fetch_ohlcv("AAPL", None, None) is None
+
+
+def test_importing_loader_does_not_create_log_file(tmp_path):
+    """Importing must not touch the filesystem (logging is configured in main())."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    backend = Path(__file__).resolve().parents[1] / "backend"
+    code = "import db.load_historical_data"
+    subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=tmp_path,
+        check=True,
+        env={"PYTHONPATH": str(backend), "PATH": ""},
+        capture_output=True,
+    )
+    assert not list(tmp_path.iterdir())
