@@ -2,9 +2,7 @@
 Risk metrics calculation service.
 """
 import logging
-from typing import Dict, List, Tuple
-import numpy as np
-from scipy import stats
+from typing import Dict, Tuple
 from sqlalchemy.orm import Session
 from config.settings import settings
 from schemas.risk import VolatilityResponse, VaRResponse, ExposureResponse

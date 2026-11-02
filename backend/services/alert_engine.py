@@ -3,7 +3,6 @@ Alert management and triggering service.
 """
 import logging
 from typing import List, Optional
-from datetime import datetime
 from sqlalchemy.orm import Session
 from models import Alert, AlertEvent
 from schemas.alert import AlertStatusResponse, AlertTriggerResponse, TriggeredAlert

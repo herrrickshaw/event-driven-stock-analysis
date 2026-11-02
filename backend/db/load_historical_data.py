@@ -31,25 +31,26 @@ Usage:
 """
 
 import argparse
-import asyncio
 import csv
 import json
 import logging
-import os
-import pickle
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
-from urllib.error import URLError
+from typing import List, Optional, Set, Tuple
 
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 from tqdm import tqdm
+
+try:
+    from .ohlcv_clean import RETRY_CONFIG, VALIDATION_CONFIG, backoff_delay, clean_ohlcv
+except ImportError:  # run as a script: python load_historical_data.py
+    from ohlcv_clean import RETRY_CONFIG, VALIDATION_CONFIG, backoff_delay, clean_ohlcv
 
 try:
     import yfinance as yf
@@ -135,23 +136,6 @@ MARKET_CONFIG = {
         'holidays_file': 'data/holidays/china_holidays.json',
         'estimated_stocks': 4000,
     },
-}
-
-# Retry configuration
-RETRY_CONFIG = {
-    'max_retries': 5,
-    'initial_backoff': 1.0,  # seconds
-    'max_backoff': 60.0,     # seconds
-    'backoff_factor': 2.0,
-    'timeout': 30.0,
-}
-
-# Data validation thresholds
-VALIDATION_CONFIG = {
-    'min_records_per_stock': 200,  # At least 200 trading days in 5 years
-    'max_price_change_pct': 500,    # Single-day change shouldn't exceed 500%
-    'max_volume_change_pct': 1000,  # Volume spike threshold
-    'min_date_range': 3.0,          # At least 3 years of data
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -257,7 +241,7 @@ def setup_logging(level=logging.INFO):
     )
     return logging.getLogger(__name__)
 
-logger = setup_logging()
+logger = logging.getLogger(__name__)  # handlers are installed by setup_logging() in main()
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -291,10 +275,7 @@ class PostgresClient:
                 return True
             except psycopg2.Error as e:
                 if attempt < RETRY_CONFIG['max_retries'] - 1:
-                    wait = min(
-                        RETRY_CONFIG['initial_backoff'] * (RETRY_CONFIG['backoff_factor'] ** attempt),
-                        RETRY_CONFIG['max_backoff']
-                    )
+                    wait = backoff_delay(attempt)
                     logger.warning(f'⚠️  Connection attempt {attempt+1} failed, retrying in {wait:.1f}s: {e}')
                     time.sleep(wait)
                 else:
@@ -433,21 +414,26 @@ class PostgresClient:
 class HistoricalDataFetcher:
     """Fetch OHLCV data from yfinance with retries and rate limiting"""
 
-    def __init__(self, db: PostgresClient, market: str):
+    def __init__(self, db: PostgresClient, market: str, download=None, sleep=time.sleep):
         self.db = db
         self.market = market
         self.market_config = MARKET_CONFIG[market]
         self.session = None
+        self._download = download  # injectable for tests; defaults to yfinance
+        self._sleep = sleep
 
     def fetch_ohlcv(self, ticker: str, start_date: date, end_date: date) -> Optional[pd.DataFrame]:
         """Fetch OHLCV data with retry logic"""
-        if not HAS_YF:
-            logger.error('yfinance not installed')
-            return None
+        download = self._download
+        if download is None:
+            if not HAS_YF:
+                logger.error('yfinance not installed')
+                return None
+            download = yf.download
 
         for attempt in range(RETRY_CONFIG['max_retries']):
             try:
-                df = yf.download(
+                df = download(
                     ticker,
                     start=str(start_date),
                     end=str(end_date),
@@ -465,54 +451,20 @@ class HistoricalDataFetcher:
 
                 return df
 
-            except (URLError, Exception) as e:
+            except Exception as e:
                 if attempt < RETRY_CONFIG['max_retries'] - 1:
-                    wait = min(
-                        RETRY_CONFIG['initial_backoff'] * (RETRY_CONFIG['backoff_factor'] ** attempt),
-                        RETRY_CONFIG['max_backoff']
-                    )
+                    wait = backoff_delay(attempt)
                     logger.debug(f'⚠️  Fetch attempt {attempt+1} failed for {ticker}, retrying in {wait:.1f}s')
-                    time.sleep(wait)
+                    self._sleep(wait)
                 else:
                     logger.error(f'❌ Failed to fetch {ticker} after {RETRY_CONFIG["max_retries"]} attempts: {e}')
                     return None
 
         return None
 
-    def validate_ohlcv(self, df: pd.DataFrame, ticker: str) -> pd.DataFrame:
-        """Validate and clean OHLCV data"""
-        initial_count = len(df)
-
-        # Remove NaN rows
-        df = df.dropna(subset=['Open', 'High', 'Low', 'Close', 'Volume'])
-
-        # Check price consistency: High >= Low, Close <= High, Close >= Low
-        df = df[
-            (df['High'] >= df['Low']) &
-            (df['Close'] <= df['High']) &
-            (df['Close'] >= df['Low']) &
-            (df['Open'] > 0) &
-            (df['Close'] > 0)
-        ]
-
-        # Detect and remove outliers (price spikes > 500%)
-        df['pct_change'] = df['Close'].pct_change().abs()
-        df = df[df['pct_change'] <= VALIDATION_CONFIG['max_price_change_pct'] / 100]
-
-        # Volume validation
-        df = df[df['Volume'] >= 0]
-
-        if len(df) < VALIDATION_CONFIG['min_records_per_stock']:
-            logger.warning(
-                f'⚠️  {ticker}: Only {len(df)} valid records (min={VALIDATION_CONFIG["min_records_per_stock"]})'
-            )
-            return None
-
-        removed = initial_count - len(df)
-        if removed > 0:
-            logger.debug(f'Cleaned {ticker}: removed {removed} invalid rows, {len(df)} valid')
-
-        return df
+    def validate_ohlcv(self, df: pd.DataFrame, ticker: str) -> Optional[pd.DataFrame]:
+        """Validate and clean OHLCV data (see ohlcv_clean.clean_ohlcv)"""
+        return clean_ohlcv(df, ticker, VALIDATION_CONFIG)
 
     def convert_to_ohlcv_records(self, df: pd.DataFrame, stock_id: int) -> List[OHLCVRecord]:
         """Convert DataFrame to OHLCVRecord objects"""
@@ -538,6 +490,28 @@ class HistoricalDataFetcher:
 # STOCK LIST LOADING
 # ═════════════════════════════════════════════════════════════════════════════
 
+# Starter lists only. NOTE: tickers are bare (no exchange qualifier) -- see README "Limitations".
+PREDEFINED_STOCKS = {
+    'india': [
+        ('RELIANCE', 'Reliance Industries'),
+        ('TCS', 'Tata Consultancy Services'),
+        ('INFY', 'Infosys'),
+        ('HDFCBANK', 'HDFC Bank'),
+        ('ICICIBANK', 'ICICI Bank'),
+        # Add more...
+    ],
+    'usa': [
+        ('AAPL', 'Apple Inc'),
+        ('MSFT', 'Microsoft Corporation'),
+        ('GOOGL', 'Alphabet Inc'),
+        ('AMZN', 'Amazon.com Inc'),
+        ('NVDA', 'NVIDIA Corporation'),
+        # Add more...
+    ],
+    # Add other markets...
+}
+
+
 class StockListLoader:
     """Load stock lists from various sources"""
 
@@ -562,26 +536,7 @@ class StockListLoader:
     @staticmethod
     def load_predefined(market: str) -> List[Tuple[str, str]]:
         """Load predefined stock lists for each market"""
-        market_stocks = {
-            'india': [
-                ('RELIANCE', 'Reliance Industries'),
-                ('TCS', 'Tata Consultancy Services'),
-                ('INFY', 'Infosys'),
-                ('HDFCBANK', 'HDFC Bank'),
-                ('ICICIBANK', 'ICICI Bank'),
-                # Add more...
-            ],
-            'usa': [
-                ('AAPL', 'Apple Inc'),
-                ('MSFT', 'Microsoft Corporation'),
-                ('GOOGL', 'Alphabet Inc'),
-                ('AMZN', 'Amazon.com Inc'),
-                ('NVDA', 'NVIDIA Corporation'),
-                # Add more...
-            ],
-            # Add other markets...
-        }
-        return market_stocks.get(market, [])
+        return list(PREDEFINED_STOCKS.get(market, []))
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -674,7 +629,7 @@ class HistoricalDataLoader:
 
         logger.info(
             f'✅ Market {market} complete: {progress.inserted_records} records '
-            f'({progress.failed_stocks.__len__()} failures)'
+            f'({len(progress.failed_stocks)} failures)'
         )
 
         return progress
@@ -771,7 +726,8 @@ class HistoricalDataLoader:
 # CLI INTERFACE
 # ═════════════════════════════════════════════════════════════════════════════
 
-def main():
+def build_arg_parser() -> argparse.ArgumentParser:
+    """CLI definition (flags unchanged)."""
     parser = argparse.ArgumentParser(
         description='Load 5-year historical OHLCV data for 20,700+ global stocks',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -871,7 +827,11 @@ Examples:
         help='Logging level'
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = build_arg_parser().parse_args()
 
     # Setup logging
     setup_logging(level=getattr(logging, args.log_level))

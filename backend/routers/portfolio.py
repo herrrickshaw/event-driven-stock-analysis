@@ -6,7 +6,7 @@ Endpoints:
 - POST   /api/portfolio/returns   - Get portfolio returns analysis
 - POST   /api/portfolio/benchmark - Compare with benchmark
 """
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from models import get_db
 from services import PortfolioAnalyzerService
