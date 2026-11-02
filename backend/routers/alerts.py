@@ -31,7 +31,7 @@ from schemas.alert import (
 )
 from events.event_bus import MarketEvent, bus
 from events.portfolio_monitor import monitor
-from utils import PortfolioNotFoundError, get_logger
+from utils import get_logger
 
 logger = get_logger(__name__)
 

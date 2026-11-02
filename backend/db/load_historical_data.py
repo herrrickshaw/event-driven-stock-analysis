@@ -31,19 +31,16 @@ Usage:
 """
 
 import argparse
-import asyncio
 import csv
 import json
 import logging
-import os
-import pickle
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import List, Optional, Set, Tuple
 from urllib.error import URLError
 
 import pandas as pd

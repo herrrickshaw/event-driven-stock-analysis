@@ -16,7 +16,7 @@ from schemas.rebalance import (
     RebalanceDriftResponse,
     RebalanceExecutionResponse,
 )
-from utils import PortfolioNotFoundError, get_logger
+from utils import get_logger
 
 logger = get_logger(__name__)
 

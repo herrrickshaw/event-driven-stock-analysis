@@ -11,4 +11,4 @@ extend-exclude = ["frontend", "notebooks", "data"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "B"]
 # Pre-existing style choices left for Phase 2: long banner/comment lines, unicode log glyphs.
-ignore = ["E501", "RUF001"]
+ignore = ["E501", "B008"]  # B008: FastAPI Depends() defaults are idiomatic
