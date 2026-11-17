@@ -12,7 +12,7 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,9 @@ class MarketHolidayCalendar:
             (2024, 4, 11), (2024, 4, 17), (2024, 4, 21), (2024, 5, 23),
             (2024, 8, 15), (2024, 8, 26), (2024, 9, 16), (2024, 10, 2),
             (2024, 10, 12), (2024, 10, 31), (2024, 11, 1), (2024, 11, 15),
-            (2024, 12, 25),
+            (2024, 12, 25), (2024, 5, 1),  # Maharashtra Day (NSE closed)
             # 2025
+            (2025, 2, 26), (2025, 3, 14), (2025, 5, 1),  # Mahashivratri, Holi, Maharashtra Day
             (2025, 1, 26), (2025, 3, 8), (2025, 3, 25), (2025, 4, 11),
             (2025, 4, 18), (2025, 4, 21), (2025, 5, 23), (2025, 8, 15),
             (2025, 8, 29), (2025, 9, 16), (2025, 10, 2), (2025, 10, 20),
@@ -47,8 +48,8 @@ class MarketHolidayCalendar:
             (2024, 1, 1), (2024, 1, 15), (2024, 2, 19), (2024, 3, 29),
             (2024, 5, 27), (2024, 6, 19), (2024, 7, 4), (2024, 9, 2),
             (2024, 11, 28), (2024, 12, 25),
-            # 2025
-            (2025, 1, 1), (2025, 1, 20), (2025, 2, 17), (2025, 4, 18),
+            # 2025 (Jan 9: NYSE closed, national day of mourning for President Carter)
+            (2025, 1, 1), (2025, 1, 9), (2025, 1, 20), (2025, 2, 17), (2025, 4, 18),
             (2025, 5, 26), (2025, 6, 19), (2025, 7, 4), (2025, 9, 1),
             (2025, 11, 27), (2025, 12, 25),
         ],
@@ -209,13 +210,19 @@ class CurrencyConverter:
         if from_currency == to_currency:
             return amount
 
-        if from_currency == 'USD':
-            # Reverse conversion
-            rate = cls._APPROXIMATE_RATES.get((to_currency, 'USD'))
-            return amount / rate if rate else amount
-        else:
-            rate = cls._APPROXIMATE_RATES.get((from_currency, to_currency))
-            return amount * rate if rate else amount
+        def to_usd_rate(cur: str) -> float:
+            if cur == 'USD':
+                return 1.0
+            rate = cls._APPROXIMATE_RATES.get((cur, 'USD'))
+            if rate is None:
+                # Returning the amount unconverted would silently price e.g.
+                # CHF as USD; refuse instead.
+                raise ValueError(f"No conversion rate for {cur}")
+            return rate
+
+        # Every pair goes through USD (the table only stores X->USD), so
+        # EUR->INR is EUR->USD->INR rather than an unconverted passthrough.
+        return amount * to_usd_rate(from_currency) / to_usd_rate(to_currency)
 
     @classmethod
     def normalize_prices(cls, prices_dict: Dict[str, float], currencies: Dict[str, str]) -> Dict[str, float]:
@@ -256,6 +263,9 @@ class DataQualityValidator:
     def compute_metrics(df, price_col='Close', volume_col='Volume') -> DataQualityMetrics:
         """Compute quality metrics for a DataFrame"""
         total = len(df)
+        if total == 0:
+            # pct_change() on an empty Series raises in pandas 2.1
+            return DataQualityMetrics(0, 0, 0, 0, 0, 0, 0, 0)
 
         # Null values
         null_mask = df[[price_col, volume_col]].isnull().any(axis=1)
@@ -327,7 +337,7 @@ class MarketConfig:
         suffix = MarketConfig.TICKER_SUFFIXES.get(market, '')
 
         # Some tickers already have suffixes embedded
-        if any(ticker.endswith(s) for s in ['.NS', '.BO', '.L', '.DE', '.PA', '.T', '.KS', '.SS', '.SZ']):
+        if any(ticker.endswith(s) for s in ['.NS', '.BO', '.L', '.DE', '.PA', '.T', '.KS', '.KQ', '.SS', '.SZ']):
             return ticker
 
         if suffix and suffix != 'varies':
