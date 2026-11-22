@@ -450,21 +450,13 @@ REBALANCING_AFTER = {
 # Error Response Examples
 # ──────────────────────────────────────────────────────────────────────────────
 
-ERROR_INVALID_MARKET = {
-    "detail": 'Unknown market "invalid". Choose from: india, us, europe, japan, korea, china'
-}
+ERROR_INVALID_MARKET = {"detail": 'Unknown market "invalid". Choose from: india, us, europe, japan, korea, china'}
 
-ERROR_UNSUPPORTED_FORMAT = {
-    "detail": 'Unsupported type ".txt". Upload .xlsx, .xls, or .pdf.'
-}
+ERROR_UNSUPPORTED_FORMAT = {"detail": 'Unsupported type ".txt". Upload .xlsx, .xls, or .pdf.'}
 
-ERROR_EMPTY_HOLDINGS = {
-    "detail": "holdings list is empty"
-}
+ERROR_EMPTY_HOLDINGS = {"detail": "holdings list is empty"}
 
-ERROR_FILE_TOO_LARGE = {
-    "detail": "File exceeds 20 MB."
-}
+ERROR_FILE_TOO_LARGE = {"detail": "File exceeds 20 MB."}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Curl Command Examples

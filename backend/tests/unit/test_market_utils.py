@@ -1,5 +1,6 @@
 """Unit tests for db/market_utils.py: holiday calendar, currency conversion,
 data-quality metrics, ticker suffix routing."""
+
 from datetime import date
 
 import pandas as pd
@@ -16,9 +17,18 @@ from db.market_utils import (
 @pytest.mark.unit
 class TestHolidayCalendar:
     # NYSE published 2024 holiday schedule
-    NYSE_2024 = [date(2024, 1, 1), date(2024, 1, 15), date(2024, 2, 19), date(2024, 3, 29),
-                 date(2024, 5, 27), date(2024, 6, 19), date(2024, 7, 4), date(2024, 9, 2),
-                 date(2024, 11, 28), date(2024, 12, 25)]
+    NYSE_2024 = [
+        date(2024, 1, 1),
+        date(2024, 1, 15),
+        date(2024, 2, 19),
+        date(2024, 3, 29),
+        date(2024, 5, 27),
+        date(2024, 6, 19),
+        date(2024, 7, 4),
+        date(2024, 9, 2),
+        date(2024, 11, 28),
+        date(2024, 12, 25),
+    ]
 
     @pytest.mark.parametrize("d", NYSE_2024)
     def test_nyse_2024_holidays_are_closed(self, d):
@@ -28,15 +38,16 @@ class TestHolidayCalendar:
         # NYSE closed 9 Jan 2025 for President Carter's national day of mourning
         assert not MarketHolidayCalendar.is_trading_day("usa", date(2025, 1, 9))
 
-    @pytest.mark.parametrize("d", [date(2024, 5, 1), date(2025, 5, 1),     # Maharashtra Day
-                                   date(2025, 2, 26),                       # Mahashivratri
-                                   date(2025, 3, 14)])                      # Holi
+    @pytest.mark.parametrize(
+        "d",
+        [date(2024, 5, 1), date(2025, 5, 1), date(2025, 2, 26), date(2025, 3, 14)],  # Maharashtra Day  # Mahashivratri
+    )  # Holi
     def test_nse_published_holidays_are_closed(self, d):
         assert not MarketHolidayCalendar.is_trading_day("india", d)
 
     def test_weekend_is_closed_and_ordinary_day_open(self):
-        assert not MarketHolidayCalendar.is_trading_day("usa", date(2024, 7, 6))   # Saturday
-        assert MarketHolidayCalendar.is_trading_day("usa", date(2024, 7, 5))       # Friday
+        assert not MarketHolidayCalendar.is_trading_day("usa", date(2024, 7, 6))  # Saturday
+        assert MarketHolidayCalendar.is_trading_day("usa", date(2024, 7, 5))  # Friday
 
     def test_next_and_prev_skip_weekend_and_holiday(self):
         # Thu 2024-07-04 holiday; Fri 5 open
@@ -73,32 +84,37 @@ class TestCurrencyConverter:
             CurrencyConverter.convert_price(100, "CHF", "USD")
 
     def test_normalize_prices_defaults_missing_currency_to_usd(self):
-        out = CurrencyConverter.normalize_prices({"RELIANCE": 2500.0, "AAPL": 180.0},
-                                                 {"RELIANCE": "INR"})
+        out = CurrencyConverter.normalize_prices({"RELIANCE": 2500.0, "AAPL": 180.0}, {"RELIANCE": "INR"})
         assert out == {"RELIANCE": pytest.approx(30.0), "AAPL": 180.0}
 
 
 @pytest.mark.unit
 class TestMarketConfig:
-    @pytest.mark.parametrize("ticker,market,expected", [
-        ("RELIANCE", "india", "RELIANCE.NS"),
-        ("500325.BO", "india", "500325.BO"),
-        ("AAPL", "usa", "AAPL"),
-        ("7203", "japan", "7203.T"),
-        ("005930", "korea", "005930.KS"),
-        ("035720.KQ", "korea", "035720.KQ"),     # KOSDAQ: never "035720.KQ.KS"
-        ("SAP.DE", "europe", "SAP.DE"),
-        ("ENI.MI", "europe", "ENI.MI"),
-        ("000001.SZ", "china", "000001.SZ"),
-    ])
+    @pytest.mark.parametrize(
+        "ticker,market,expected",
+        [
+            ("RELIANCE", "india", "RELIANCE.NS"),
+            ("500325.BO", "india", "500325.BO"),
+            ("AAPL", "usa", "AAPL"),
+            ("7203", "japan", "7203.T"),
+            ("005930", "korea", "005930.KS"),
+            ("035720.KQ", "korea", "035720.KQ"),  # KOSDAQ: never "035720.KQ.KS"
+            ("SAP.DE", "europe", "SAP.DE"),
+            ("ENI.MI", "europe", "ENI.MI"),
+            ("000001.SZ", "china", "000001.SZ"),
+        ],
+    )
     def test_get_yfinance_ticker(self, ticker, market, expected):
         assert MarketConfig.get_yfinance_ticker(ticker, market) == expected
 
-    @pytest.mark.parametrize("yf,market,expected", [
-        ("RELIANCE.NS", "india", "RELIANCE"),
-        ("7203.T", "japan", "7203"),
-        ("AAPL", "usa", "AAPL"),
-    ])
+    @pytest.mark.parametrize(
+        "yf,market,expected",
+        [
+            ("RELIANCE.NS", "india", "RELIANCE"),
+            ("7203.T", "japan", "7203"),
+            ("AAPL", "usa", "AAPL"),
+        ],
+    )
     def test_get_local_ticker(self, yf, market, expected):
         assert MarketConfig.get_local_ticker(yf, market) == expected
 
@@ -117,7 +133,7 @@ class TestDataQuality:
         m = DataQualityValidator.compute_metrics(df)
         assert m.null_records == 1
         assert m.duplicate_records == 1
-        assert m.outlier_records == 1            # 10 -> 100 is +900 %
+        assert m.outlier_records == 1  # 10 -> 100 is +900 %
         assert m.completeness_pct == 75.0
         assert not DataQualityValidator.is_quality_acceptable(m)
 

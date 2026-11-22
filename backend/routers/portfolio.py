@@ -6,15 +6,17 @@ Endpoints:
 - POST   /api/portfolio/returns   - Get portfolio returns analysis
 - POST   /api/portfolio/benchmark - Compare with benchmark
 """
-from fastapi import APIRouter, Depends, Path, Query
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from models import get_db
-from services import PortfolioAnalyzerService
 from schemas.portfolio import (
-    PortfolioSnapshotResponse,
-    PortfolioReturnsResponse,
     BenchmarkComparison,
+    PortfolioReturnsResponse,
+    PortfolioSnapshotResponse,
 )
+from services import PortfolioAnalyzerService
 from utils import PortfolioNotFoundError, get_logger
 
 logger = get_logger(__name__)
@@ -88,9 +90,7 @@ async def get_portfolio_returns(
     if not portfolio:
         raise PortfolioNotFoundError(portfolio_id)
 
-    logger.info(
-        f"Calculating portfolio returns for portfolio_id={portfolio_id}, period={period}"
-    )
+    logger.info(f"Calculating portfolio returns for portfolio_id={portfolio_id}, period={period}")
 
     # TODO: Call service to calculate returns
     # returns = service.calculate_returns(portfolio_id, period)
@@ -129,9 +129,7 @@ async def compare_with_benchmark(
     if not portfolio:
         raise PortfolioNotFoundError(portfolio_id)
 
-    logger.info(
-        f"Comparing portfolio {portfolio_id} against benchmark {benchmark_symbol}"
-    )
+    logger.info(f"Comparing portfolio {portfolio_id} against benchmark {benchmark_symbol}")
 
     # TODO: Call service to compare performance
     # comparison = service.compare_with_benchmark(portfolio_id, benchmark_symbol)

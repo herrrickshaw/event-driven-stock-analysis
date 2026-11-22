@@ -1,9 +1,11 @@
 """
 Pydantic schemas for rebalancing endpoints.
 """
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+
 from datetime import datetime
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class RebalanceScheduleRequest(BaseModel):

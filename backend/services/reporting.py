@@ -1,9 +1,11 @@
 """
 Reporting service for generating analysis reports.
 """
+
 import logging
-from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session
+
 from models import Report
 from schemas.report import DailyReportResponse, MonthlyReportResponse
 
@@ -130,9 +132,7 @@ class ReportingService:
         # - Return sector performance dict
         raise NotImplementedError("Sector performance calculation not implemented")
 
-    def save_report_to_db(
-        self, portfolio_id: int, report_type: str, content: dict
-    ) -> Report:
+    def save_report_to_db(self, portfolio_id: int, report_type: str, content: dict) -> Report:
         """
         Save generated report to database.
 
@@ -151,9 +151,7 @@ class ReportingService:
         # - Return Report
         raise NotImplementedError("Report persistence not implemented")
 
-    def get_report_history(
-        self, portfolio_id: int, report_type: str, limit: int = 10
-    ) -> list:
+    def get_report_history(self, portfolio_id: int, report_type: str, limit: int = 10) -> list:
         """
         Get historical reports for a portfolio.
 

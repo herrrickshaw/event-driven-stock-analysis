@@ -8,11 +8,10 @@ Test cases:
 - Return calculations (absolute, percentage)
 - Portfolio rebalancing logic
 """
+
 from __future__ import annotations
 
 import pytest
-from datetime import datetime, timedelta
-from decimal import Decimal
 
 
 class PortfolioCalculator:
@@ -50,22 +49,23 @@ class PortfolioCalculator:
     @staticmethod
     def calculate_portfolio_value(holdings: list[dict]) -> float:
         """Calculate total portfolio value."""
-        return sum(h['current_value'] for h in holdings)
+        return sum(h["current_value"] for h in holdings)
 
     @staticmethod
     def calculate_portfolio_cost_basis(holdings: list[dict]) -> float:
         """Calculate total cost basis."""
-        return sum(h['cost_basis'] for h in holdings)
+        return sum(h["cost_basis"] for h in holdings)
 
     @staticmethod
     def calculate_portfolio_pnl(holdings: list[dict]) -> float:
         """Calculate total portfolio P&L."""
-        return sum(h['unrealised_pnl'] for h in holdings)
+        return sum(h["unrealised_pnl"] for h in holdings)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Individual Holdings
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestHoldingCalculations:
@@ -131,6 +131,7 @@ class TestHoldingCalculations:
 # Unit Tests: Portfolio Level
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestPortfolioCalculations:
     """Test calculations for entire portfolio."""
@@ -139,10 +140,10 @@ class TestPortfolioCalculations:
         """Test total portfolio value."""
         holdings = [
             {
-                'yf_ticker': h.yf_ticker,
-                'quantity': h.quantity,
-                'current_price': sample_quotes[h.yf_ticker]['close'],
-                'current_value': h.quantity * sample_quotes[h.yf_ticker]['close'],
+                "yf_ticker": h.yf_ticker,
+                "quantity": h.quantity,
+                "current_price": sample_quotes[h.yf_ticker]["close"],
+                "current_value": h.quantity * sample_quotes[h.yf_ticker]["close"],
             }
             for h in sample_portfolio_india
             if h.yf_ticker in sample_quotes
@@ -156,9 +157,9 @@ class TestPortfolioCalculations:
         """Test total cost basis."""
         holdings = [
             {
-                'quantity': h.quantity,
-                'purchase_price': h.purchase_price,
-                'cost_basis': h.quantity * h.purchase_price,
+                "quantity": h.quantity,
+                "purchase_price": h.purchase_price,
+                "cost_basis": h.quantity * h.purchase_price,
             }
             for h in sample_portfolio_india
         ]
@@ -170,9 +171,9 @@ class TestPortfolioCalculations:
     def test_portfolio_pnl(self):
         """Test total portfolio P&L."""
         holdings = [
-            {'unrealised_pnl': 37550.0},
-            {'unrealised_pnl': 9025.0},
-            {'unrealised_pnl': -5000.0},
+            {"unrealised_pnl": 37550.0},
+            {"unrealised_pnl": 9025.0},
+            {"unrealised_pnl": -5000.0},
         ]
         total_pnl = PortfolioCalculator.calculate_portfolio_pnl(holdings)
         assert total_pnl == 41575.0
@@ -180,8 +181,8 @@ class TestPortfolioCalculations:
     def test_portfolio_pnl_negative(self):
         """Test total portfolio P&L (all losses)."""
         holdings = [
-            {'unrealised_pnl': -10000.0},
-            {'unrealised_pnl': -5000.0},
+            {"unrealised_pnl": -10000.0},
+            {"unrealised_pnl": -5000.0},
         ]
         total_pnl = PortfolioCalculator.calculate_portfolio_pnl(holdings)
         assert total_pnl == -15000.0
@@ -197,6 +198,7 @@ class TestPortfolioCalculations:
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Return Calculations
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestReturnCalculations:
@@ -251,6 +253,7 @@ class TestReturnCalculations:
 # Unit Tests: Rebalancing Logic
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestRebalancingLogic:
     """Test portfolio rebalancing calculations."""
@@ -278,8 +281,8 @@ class TestRebalancingLogic:
 
     def test_detect_drift_within_threshold(self):
         """Test detection when drift is within threshold."""
-        current = {'RELIANCE': 0.45, 'HDFC': 0.35, 'INFY': 0.20}
-        target = {'RELIANCE': 0.40, 'HDFC': 0.35, 'INFY': 0.25}
+        current = {"RELIANCE": 0.45, "HDFC": 0.35, "INFY": 0.20}
+        target = {"RELIANCE": 0.40, "HDFC": 0.35, "INFY": 0.25}
         threshold = 0.10  # 10% tolerance
 
         drifts = self.detect_drift(current, target, threshold)
@@ -287,14 +290,14 @@ class TestRebalancingLogic:
 
     def test_detect_drift_exceeds_threshold(self):
         """Test detection when drift exceeds threshold."""
-        current = {'RELIANCE': 0.50, 'HDFC': 0.30, 'INFY': 0.20}
-        target = {'RELIANCE': 0.40, 'HDFC': 0.35, 'INFY': 0.25}
+        current = {"RELIANCE": 0.50, "HDFC": 0.30, "INFY": 0.20}
+        target = {"RELIANCE": 0.40, "HDFC": 0.35, "INFY": 0.25}
         threshold = 0.05  # 5% tolerance
 
         drifts = self.detect_drift(current, target, threshold)
-        assert 'RELIANCE' in drifts
-        assert 'HDFC' in drifts
-        assert 'INFY' in drifts
+        assert "RELIANCE" in drifts
+        assert "HDFC" in drifts
+        assert "INFY" in drifts
 
     def test_calculate_rebalance_action_buy(self):
         """Test rebalancing when need to buy."""
@@ -334,6 +337,7 @@ class TestRebalancingLogic:
 # Unit Tests: Edge Cases
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestEdgeCases:
     """Test edge cases in portfolio calculations."""
@@ -370,13 +374,13 @@ class TestEdgeCases:
         """Test portfolio with single holding."""
         holdings = [
             {
-                'yf_ticker': 'RELIANCE.NS',
-                'quantity': 100,
-                'purchase_price': 2500.0,
-                'current_price': 2875.5,
-                'cost_basis': 250000.0,
-                'current_value': 287550.0,
-                'unrealised_pnl': 37550.0,
+                "yf_ticker": "RELIANCE.NS",
+                "quantity": 100,
+                "purchase_price": 2500.0,
+                "current_price": 2875.5,
+                "cost_basis": 250000.0,
+                "current_value": 287550.0,
+                "unrealised_pnl": 37550.0,
             }
         ]
         portfolio_value = PortfolioCalculator.calculate_portfolio_value(holdings)

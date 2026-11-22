@@ -1,9 +1,11 @@
 """
 Pydantic schemas for risk endpoints.
 """
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+
 from datetime import datetime
+from typing import Dict, List
+
+from pydantic import BaseModel, Field
 
 
 class VolatilityResponse(BaseModel):
@@ -75,8 +77,6 @@ class ExposureResponse(BaseModel):
     geographies: List[GeographyExposure]
     asset_classes: Dict[str, float]
     currency_exposure: Dict[str, float]
-    top_10_holdings_concentration: float = Field(
-        ..., description="Percentage of portfolio in top 10 holdings"
-    )
+    top_10_holdings_concentration: float = Field(..., description="Percentage of portfolio in top 10 holdings")
     largest_holding_concentration: float
     calculated_at: datetime

@@ -1,5 +1,6 @@
 """Unit tests for the in-process EventBus and PortfolioMonitor (the implemented
 'event-driven' core)."""
+
 import asyncio
 from datetime import timezone
 
@@ -29,6 +30,7 @@ class TestEventBus:
         async def cb(e):
             await asyncio.sleep(0)
             got.append(e.ticker)
+
         bus.subscribe("*", cb)
         asyncio.run(bus.publish(ev()))
         assert got == ["RELIANCE"]
@@ -55,8 +57,8 @@ class TestEventBus:
         cb = got.append
         bus.subscribe("*", cb)
         bus.unsubscribe("*", cb)
-        bus.unsubscribe("*", cb)            # second call is a no-op
-        bus.unsubscribe("NEVER", cb)        # unknown type is a no-op
+        bus.unsubscribe("*", cb)  # second call is a no-op
+        bus.unsubscribe("NEVER", cb)  # unknown type is a no-op
         asyncio.run(bus.publish(ev()))
         assert got == []
 
@@ -66,6 +68,7 @@ class TestEventBus:
         def once(e):
             got.append(e)
             bus.unsubscribe("*", once)
+
         bus.subscribe("*", once)
         bus.subscribe("*", lambda e: got.append("second"))
         asyncio.run(bus.publish(ev()))

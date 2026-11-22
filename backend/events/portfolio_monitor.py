@@ -6,6 +6,7 @@ represent what a user owns, this represents what the event pipeline should
 currently be watching (a superset that could include names on a user's
 radar without a position, or filtered down to only liquid/large holdings).
 """
+
 from __future__ import annotations
 
 from typing import Dict, List

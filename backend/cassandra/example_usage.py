@@ -11,11 +11,12 @@ Demonstrates:
 
 import logging
 from datetime import datetime, timedelta
+
 from cassandra_client import (
     CassandraClient,
     Instrument,
-    QuoteSnapshot,
     PriceBar,
+    QuoteSnapshot,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -28,16 +29,16 @@ def example_connect_and_health_check():
 
     # Connect to local Cassandra cluster (development)
     client = CassandraClient(
-        hosts=['127.0.0.1'],  # Replace with your cluster nodes
+        hosts=["127.0.0.1"],  # Replace with your cluster nodes
         port=9042,
-        keyspace='herrrickshaw',
+        keyspace="herrrickshaw",
     )
 
     # Check cluster health
     health = client.check_health()
     print(f"Cluster health: {health['healthy']}")
     print(f"Connected nodes: {len(health['nodes'])}")
-    for node in health['nodes']:
+    for node in health["nodes"]:
         print(f"  - {node['ip']} (DC: {node['datacenter']}, Up: {node['is_up']})")
 
     return client
@@ -50,39 +51,39 @@ def example_seed_instruments(client: CassandraClient):
     # Create sample instruments for India market
     instruments = [
         Instrument(
-            market='india',
-            yf_ticker='RELIANCE.NS',
-            name='Reliance Industries',
-            symbol='RELIANCE',
-            isin='INE002A01018',
-            exchange='NSE',
-            country='IN',
-            sector='Energy',
-            industry='Oil & Gas',
+            market="india",
+            yf_ticker="RELIANCE.NS",
+            name="Reliance Industries",
+            symbol="RELIANCE",
+            isin="INE002A01018",
+            exchange="NSE",
+            country="IN",
+            sector="Energy",
+            industry="Oil & Gas",
             market_cap_inr=1750000.0,  # ~₹1.75 trillion
         ),
         Instrument(
-            market='india',
-            yf_ticker='HDFCBANK.NS',
-            name='HDFC Bank',
-            symbol='HDFCBANK',
-            isin='INE001A01015',
-            exchange='NSE',
-            country='IN',
-            sector='Financials',
-            industry='Banking',
+            market="india",
+            yf_ticker="HDFCBANK.NS",
+            name="HDFC Bank",
+            symbol="HDFCBANK",
+            isin="INE001A01015",
+            exchange="NSE",
+            country="IN",
+            sector="Financials",
+            industry="Banking",
             market_cap_inr=800000.0,
         ),
         Instrument(
-            market='india',
-            yf_ticker='TCS.NS',
-            name='Tata Consultancy Services',
-            symbol='TCS',
-            isin='INE467B01029',
-            exchange='NSE',
-            country='IN',
-            sector='IT',
-            industry='Software',
+            market="india",
+            yf_ticker="TCS.NS",
+            name="Tata Consultancy Services",
+            symbol="TCS",
+            isin="INE467B01029",
+            exchange="NSE",
+            country="IN",
+            sector="IT",
+            industry="Software",
             market_cap_inr=620000.0,
         ),
     ]
@@ -93,12 +94,12 @@ def example_seed_instruments(client: CassandraClient):
 
     # Update seed status
     client.update_seed_status(
-        market='india',
+        market="india",
         row_count=success,
         phase1_complete=True,
         phase2_complete=False,
     )
-    print(f"Seed status updated for india market")
+    print("Seed status updated for india market")
 
 
 def example_insert_quotes(client: CassandraClient):
@@ -108,8 +109,8 @@ def example_insert_quotes(client: CassandraClient):
     # Create sample quotes
     quotes = [
         QuoteSnapshot(
-            market='india',
-            yf_ticker='RELIANCE.NS',
+            market="india",
+            yf_ticker="RELIANCE.NS",
             cmp=2850.50,
             open=2840.00,
             high=2875.00,
@@ -130,8 +131,8 @@ def example_insert_quotes(client: CassandraClient):
             last_updated=datetime.utcnow(),
         ),
         QuoteSnapshot(
-            market='india',
-            yf_ticker='HDFCBANK.NS',
+            market="india",
+            yf_ticker="HDFCBANK.NS",
             cmp=1650.00,
             open=1640.00,
             high=1670.00,
@@ -170,16 +171,18 @@ def example_insert_price_history(client: CassandraClient):
     for i in range(10):
         date = base_date - timedelta(days=i)
         price = base_price + (i % 5) * 10  # Varying prices
-        bars.append(PriceBar(
-            yf_ticker='RELIANCE.NS',
-            price_date=date,
-            open=price - 5,
-            high=price + 10,
-            low=price - 10,
-            close=price,
-            volume=2500000 + (i * 100000),
-            adjusted_close=price,
-        ))
+        bars.append(
+            PriceBar(
+                yf_ticker="RELIANCE.NS",
+                price_date=date,
+                open=price - 5,
+                high=price + 10,
+                low=price - 10,
+                close=price,
+                volume=2500000 + (i * 100000),
+                adjusted_close=price,
+            )
+        )
 
     # Batch insert
     success, failed = client.insert_price_bars_batch(bars)
@@ -190,7 +193,7 @@ def example_query_instrument(client: CassandraClient):
     """Example: Query single instrument."""
     print("\n=== Example 5: Query Single Instrument ===")
 
-    instrument = client.get_instrument('india', 'RELIANCE.NS')
+    instrument = client.get_instrument("india", "RELIANCE.NS")
     if instrument:
         print(f"Symbol: {instrument.symbol}")
         print(f"Name: {instrument.name}")
@@ -204,7 +207,7 @@ def example_query_quote(client: CassandraClient):
     """Example: Query stock quote."""
     print("\n=== Example 6: Query Stock Quote ===")
 
-    quote = client.get_quote('india', 'RELIANCE.NS')
+    quote = client.get_quote("india", "RELIANCE.NS")
     if quote:
         print(f"CMP: ₹{quote.cmp}")
         print(f"RSI: {quote.rsi}")
@@ -222,19 +225,18 @@ def example_query_price_history(client: CassandraClient):
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=30)
 
-    bars = client.get_price_history('RELIANCE.NS', start_date, end_date)
+    bars = client.get_price_history("RELIANCE.NS", start_date, end_date)
     print(f"Fetched {len(bars)} price bars")
     if bars:
         for bar in bars[:3]:
-            print(f"  {bar.price_date}: O={bar.open} H={bar.high} "
-                  f"L={bar.low} C={bar.close} V={bar.volume}")
+            print(f"  {bar.price_date}: O={bar.open} H={bar.high} " f"L={bar.low} C={bar.close} V={bar.volume}")
 
 
 def example_market_scan(client: CassandraClient):
     """Example: Fetch all quotes for market scan."""
     print("\n=== Example 8: Market Scan (Fetch All Quotes) ===")
 
-    quotes = client.get_quotes_by_market('india')
+    quotes = client.get_quotes_by_market("india")
     print(f"Fetched {len(quotes)} quotes for India market")
 
     # Filter oversold stocks (RSI < 30)
@@ -244,8 +246,7 @@ def example_market_scan(client: CassandraClient):
         print(f"  {q.yf_ticker}: RSI={q.rsi}, CMP=₹{q.cmp}")
 
     # Filter near 52-week high
-    near_high = [q for q in quotes if q.high_52w and q.cmp
-                 and q.cmp > q.high_52w * 0.95]
+    near_high = [q for q in quotes if q.high_52w and q.cmp and q.cmp > q.high_52w * 0.95]
     print(f"Near 52W high (>95%): {len(near_high)}")
     for q in near_high:
         print(f"  {q.yf_ticker}: {q.cmp:.0f} / {q.high_52w:.0f}")
@@ -256,11 +257,11 @@ def example_search_operations(client: CassandraClient):
     print("\n=== Example 9: Search Operations ===")
 
     # Search by symbol
-    results = client.search_by_symbol('india', 'RELIANCE')
+    results = client.search_by_symbol("india", "RELIANCE")
     print(f"Search by symbol 'RELIANCE': {len(results)} results")
 
     # Search by name prefix
-    results = client.search_by_name_prefix('india', 'hdfc')
+    results = client.search_by_name_prefix("india", "hdfc")
     print(f"Search by name prefix 'hdfc': {len(results)} results")
 
 
@@ -268,7 +269,7 @@ def example_seed_status(client: CassandraClient):
     """Example: Check and manage seed status."""
     print("\n=== Example 10: Seed Status ===")
 
-    status = client.get_seed_status('india')
+    status = client.get_seed_status("india")
     if status:
         print(f"Market: {status['market']}")
         print(f"Row count: {status['row_count']}")
@@ -283,13 +284,13 @@ def example_context_manager():
     """Example: Using client as context manager."""
     print("\n=== Example 11: Context Manager Usage ===")
 
-    with CassandraClient(hosts=['127.0.0.1']) as client:
+    with CassandraClient(hosts=["127.0.0.1"]) as client:
         health = client.check_health()
         print(f"Cluster health: {health['healthy']}")
         # Client automatically closes on exit
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Connect to Cassandra
     client = example_connect_and_health_check()
 

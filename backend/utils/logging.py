@@ -1,9 +1,11 @@
 """
 Logging configuration.
 """
-import logging
+
 import json
+import logging
 from datetime import datetime
+
 from config.settings import settings
 
 
@@ -48,9 +50,7 @@ def setup_logging():
     if settings.log_format == "json":
         formatter = JSONFormatter()
     else:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)

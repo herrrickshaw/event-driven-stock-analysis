@@ -1,4 +1,5 @@
 """Unit tests for utils/errors.py status codes and messages."""
+
 import pytest
 
 from utils.errors import (
@@ -12,12 +13,15 @@ from utils.errors import (
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("exc,code,fragment", [
-    (PortfolioNotFoundError(7), 404, "Portfolio with id 7 not found"),
-    (HoldingNotFoundError(3), 404, "Holding with id 3 not found"),
-    (InvalidWeightsError(), 422, "sum to 100%"),
-    (InsufficientDataError(), 400, "Insufficient data"),
-])
+@pytest.mark.parametrize(
+    "exc,code,fragment",
+    [
+        (PortfolioNotFoundError(7), 404, "Portfolio with id 7 not found"),
+        (HoldingNotFoundError(3), 404, "Holding with id 3 not found"),
+        (InvalidWeightsError(), 422, "sum to 100%"),
+        (InsufficientDataError(), 400, "Insufficient data"),
+    ],
+)
 def test_error_status_and_detail(exc, code, fragment):
     assert exc.status_code == code and fragment in exc.detail
 

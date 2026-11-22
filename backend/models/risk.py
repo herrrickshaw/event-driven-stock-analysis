@@ -1,9 +1,11 @@
 """
 Risk metrics and analysis ORM models.
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Index
-from sqlalchemy.orm import relationship
+
 from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String
+
 from .base import Base
 
 

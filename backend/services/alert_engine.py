@@ -1,10 +1,12 @@
 """
 Alert management and triggering service.
 """
+
 import logging
 from typing import List, Optional
-from datetime import datetime
+
 from sqlalchemy.orm import Session
+
 from models import Alert, AlertEvent
 from schemas.alert import AlertStatusResponse, AlertTriggerResponse, TriggeredAlert
 
@@ -34,9 +36,7 @@ class AlertEngineService:
         # - Return AlertStatusResponse
         raise NotImplementedError("Alert status retrieval not implemented")
 
-    def trigger_alerts(
-        self, portfolio_id: int, alert_types: Optional[List[str]] = None
-    ) -> AlertTriggerResponse:
+    def trigger_alerts(self, portfolio_id: int, alert_types: Optional[List[str]] = None) -> AlertTriggerResponse:
         """
         Check and trigger alerts for a portfolio.
 
@@ -155,9 +155,7 @@ class AlertEngineService:
         # - Return AlertEvent
         raise NotImplementedError("Alert acknowledgment not implemented")
 
-    def create_alert(
-        self, portfolio_id: int, alert_type: str, threshold_value: float = None
-    ) -> Alert:
+    def create_alert(self, portfolio_id: int, alert_type: str, threshold_value: float = None) -> Alert:
         """
         Create a new alert for a portfolio.
 

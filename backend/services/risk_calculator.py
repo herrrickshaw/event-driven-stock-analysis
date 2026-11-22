@@ -1,13 +1,14 @@
 """
 Risk metrics calculation service.
 """
+
 import logging
-from typing import Dict, List, Tuple
-import numpy as np
-from scipy import stats
+from typing import Dict, Tuple
+
 from sqlalchemy.orm import Session
+
 from config.settings import settings
-from schemas.risk import VolatilityResponse, VaRResponse, ExposureResponse
+from schemas.risk import ExposureResponse, VaRResponse, VolatilityResponse
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,7 @@ class RiskCalculatorService:
         # - Return VolatilityResponse
         raise NotImplementedError("Volatility calculation not implemented")
 
-    def calculate_var(
-        self, portfolio_id: int, confidence_level: float = 0.95, time_horizon: str = "1d"
-    ) -> VaRResponse:
+    def calculate_var(self, portfolio_id: int, confidence_level: float = 0.95, time_horizon: str = "1d") -> VaRResponse:
         """
         Calculate Value at Risk (VaR) for portfolio.
 

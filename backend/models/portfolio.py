@@ -1,9 +1,12 @@
 """
 Portfolio and Holdings ORM models.
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Numeric
-from sqlalchemy.orm import relationship
+
 from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, Numeric, String
+from sqlalchemy.orm import relationship
+
 from .base import Base
 
 

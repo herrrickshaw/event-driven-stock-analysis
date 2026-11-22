@@ -1,4 +1,5 @@
 """Integration tests for the implemented live-watchlist / EventBus endpoints."""
+
 import pytest
 
 from events import event_bus, portfolio_monitor
@@ -9,6 +10,7 @@ def fresh_singletons(monkeypatch):
     bus = event_bus.EventBus()
     mon = portfolio_monitor.PortfolioMonitor()
     import routers.alerts as alerts
+
     monkeypatch.setattr(alerts, "bus", bus)
     monkeypatch.setattr(alerts, "monitor", mon)
     return bus, mon
@@ -28,8 +30,7 @@ class TestAlertsWatchlist:
     def test_manual_trigger_publishes_and_latest_is_newest_first(self, client, fresh_singletons):
         bus, _ = fresh_singletons
         for t in ("AAA", "BBB", "CCC"):
-            assert client.post(f"/api/alerts/trigger/{t}?market=us").json() == {
-                "status": "triggered", "ticker": t}
+            assert client.post(f"/api/alerts/trigger/{t}?market=us").json() == {"status": "triggered", "ticker": t}
         assert [e.ticker for e in bus.history] == ["AAA", "BBB", "CCC"]
         latest = client.get("/api/alerts/latest?limit=2").json()["alerts"]
         assert [a["ticker"] for a in latest] == ["CCC", "BBB"]

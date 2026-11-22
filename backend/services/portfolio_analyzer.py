@@ -1,11 +1,14 @@
 """
 Portfolio analysis service.
 """
+
 import logging
-from typing import Optional, List
+from typing import List, Optional
+
 from sqlalchemy.orm import Session
-from models import Portfolio, Holding
-from schemas.portfolio import PortfolioSnapshotResponse, PortfolioReturnsResponse
+
+from models import Holding, Portfolio
+from schemas.portfolio import PortfolioReturnsResponse, PortfolioSnapshotResponse
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +37,7 @@ class PortfolioAnalyzerService:
         # - Return PortfolioSnapshotResponse
         raise NotImplementedError("Portfolio snapshot calculation not implemented")
 
-    def calculate_returns(
-        self, portfolio_id: int, period: str = "1d"
-    ) -> PortfolioReturnsResponse:
+    def calculate_returns(self, portfolio_id: int, period: str = "1d") -> PortfolioReturnsResponse:
         """
         Calculate portfolio returns for specified period.
 
@@ -55,9 +56,7 @@ class PortfolioAnalyzerService:
         # - Return PortfolioReturnsResponse
         raise NotImplementedError("Portfolio returns calculation not implemented")
 
-    def compare_with_benchmark(
-        self, portfolio_id: int, benchmark_symbol: str
-    ) -> dict:
+    def compare_with_benchmark(self, portfolio_id: int, benchmark_symbol: str) -> dict:
         """
         Compare portfolio performance against a benchmark.
 
@@ -81,8 +80,4 @@ class PortfolioAnalyzerService:
 
     def list_holdings(self, portfolio_id: int) -> List[Holding]:
         """List all holdings in a portfolio."""
-        return (
-            self.db.query(Holding)
-            .filter(Holding.portfolio_id == portfolio_id)
-            .all()
-        )
+        return self.db.query(Holding).filter(Holding.portfolio_id == portfolio_id).all()
