@@ -1,6 +1,7 @@
 """
 Custom exception definitions and error handling.
 """
+
 from fastapi import HTTPException, status
 
 

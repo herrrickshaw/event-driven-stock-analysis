@@ -7,17 +7,19 @@ Endpoints:
 - POST   /api/risk/correlation   - Calculate pairwise correlations
 - POST   /api/risk/exposure      - Calculate portfolio exposures
 """
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from models import get_db
-from services import RiskCalculatorService
 from schemas.risk import (
-    VolatilityResponse,
-    VaRResponse,
     CorrelationMatrixResponse,
     ExposureResponse,
+    VaRResponse,
+    VolatilityResponse,
 )
-from utils import PortfolioNotFoundError, get_logger
+from services import RiskCalculatorService
+from utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -45,11 +47,9 @@ async def calculate_volatility(
     Returns:
         VolatilityResponse with volatility metrics
     """
-    service = RiskCalculatorService(db)
+    service = RiskCalculatorService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Calculating volatility for portfolio_id={portfolio_id}, lookback={lookback_days}d"
-    )
+    logger.info(f"Calculating volatility for portfolio_id={portfolio_id}, lookback={lookback_days}d")
 
     # TODO: Call service to calculate volatility
     # volatility = service.calculate_volatility(portfolio_id)
@@ -79,11 +79,9 @@ async def calculate_var(
     Returns:
         VaRResponse with VaR metrics
     """
-    service = RiskCalculatorService(db)
+    service = RiskCalculatorService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Calculating VaR for portfolio_id={portfolio_id}, horizon={time_horizon}"
-    )
+    logger.info(f"Calculating VaR for portfolio_id={portfolio_id}, horizon={time_horizon}")
 
     # TODO: Call service to calculate VaR
     # var = service.calculate_var(portfolio_id, time_horizon=time_horizon)
@@ -113,11 +111,9 @@ async def calculate_correlations(
     Returns:
         CorrelationMatrixResponse with correlation data
     """
-    service = RiskCalculatorService(db)
+    service = RiskCalculatorService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Calculating correlations for portfolio_id={portfolio_id}, lookback={lookback_days}d"
-    )
+    logger.info(f"Calculating correlations for portfolio_id={portfolio_id}, lookback={lookback_days}d")
 
     # TODO: Call service to calculate correlations
     # correlations = service.calculate_correlations(portfolio_id)
@@ -145,7 +141,7 @@ async def calculate_exposure(
     Returns:
         ExposureResponse with exposure breakdown
     """
-    service = RiskCalculatorService(db)
+    service = RiskCalculatorService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
     logger.info(f"Calculating exposures for portfolio_id={portfolio_id}")
 

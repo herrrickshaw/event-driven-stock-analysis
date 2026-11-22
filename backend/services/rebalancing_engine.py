@@ -1,10 +1,13 @@
 """
 Portfolio rebalancing service.
 """
+
 import logging
-from typing import Dict, List
 from datetime import datetime
+from typing import Dict, List
+
 from sqlalchemy.orm import Session
+
 from models import RebalanceEvent
 from schemas.rebalance import RebalanceDriftResponse, RebalanceExecutionResponse
 
@@ -46,9 +49,7 @@ class RebalancingEngineService:
         # - Return RebalanceEvent
         raise NotImplementedError("Rebalancing scheduling not implemented")
 
-    def calculate_drift(
-        self, portfolio_id: int, drift_threshold_pct: float = 5.0
-    ) -> RebalanceDriftResponse:
+    def calculate_drift(self, portfolio_id: int, drift_threshold_pct: float = 5.0) -> RebalanceDriftResponse:
         """
         Calculate portfolio drift from target weights.
 
@@ -89,9 +90,7 @@ class RebalancingEngineService:
         # - Return RebalanceExecutionResponse
         raise NotImplementedError("Rebalancing execution not implemented")
 
-    def get_rebalance_actions(
-        self, portfolio_id: int, target_weights: Dict[str, float]
-    ) -> List[Dict]:
+    def get_rebalance_actions(self, portfolio_id: int, target_weights: Dict[str, float]) -> List[Dict]:
         """
         Calculate specific buy/sell actions needed to rebalance.
 
@@ -110,9 +109,7 @@ class RebalancingEngineService:
         # - Return list of actions
         raise NotImplementedError("Action calculation not implemented")
 
-    def estimate_rebalancing_costs(
-        self, portfolio_id: int, actions: List[Dict]
-    ) -> float:
+    def estimate_rebalancing_costs(self, portfolio_id: int, actions: List[Dict]) -> float:
         """
         Estimate transaction costs for rebalancing actions.
 

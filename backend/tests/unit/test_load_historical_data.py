@@ -1,5 +1,6 @@
 """Unit tests for the pure parts of db/load_historical_data.py (no Postgres,
 no yfinance: the fetcher gets a dummy db and DataFrames built in-test)."""
+
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -20,8 +21,9 @@ N = VALIDATION_CONFIG["min_records_per_stock"] + 50
 def ohlcv(n=N, close=100.0):
     idx = pd.bdate_range("2020-01-01", periods=n)
     c = np.full(n, close)
-    return pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c,
-                         "Volume": np.full(n, 1000)}, index=idx)
+    return pd.DataFrame(
+        {"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": np.full(n, 1000)}, index=idx
+    )
 
 
 @pytest.fixture
@@ -38,7 +40,7 @@ class TestValidateOHLCV:
 
     def test_inconsistent_and_missing_rows_dropped(self, fetcher):
         df = ohlcv()
-        df.iloc[10, df.columns.get_loc("High")] = 50.0      # high < low
+        df.iloc[10, df.columns.get_loc("High")] = 50.0  # high < low
         df.iloc[11, df.columns.get_loc("Close")] = np.nan
         df.iloc[12, df.columns.get_loc("Open")] = 0.0
         out = fetcher.validate_ohlcv(df, "AAA")
@@ -67,8 +69,7 @@ class TestValidateOHLCV:
 @pytest.mark.unit
 class TestLoadProgress:
     def test_round_trip(self, tmp_path):
-        p = LoadProgress(market="usa", total_stocks=10, completed_stocks=3,
-                         failed_stocks=["X"])
+        p = LoadProgress(market="usa", total_stocks=10, completed_stocks=3, failed_stocks=["X"])
         path = tmp_path / "sub" / "progress.json"
         p.save(path)
         q = LoadProgress.load(path)
@@ -79,8 +80,9 @@ class TestLoadProgress:
         assert LoadProgress.load(tmp_path / "nope.json") is None
 
     def test_eta(self):
-        p = LoadProgress(market="usa", total_stocks=10, completed_stocks=5,
-                         start_time=datetime.now() - timedelta(seconds=50))
+        p = LoadProgress(
+            market="usa", total_stocks=10, completed_stocks=5, start_time=datetime.now() - timedelta(seconds=50)
+        )
         assert p.get_eta() in ("0:00:50", "0:00:49", "0:00:51")
         assert LoadProgress(market="usa", total_stocks=10).get_eta() is None
 

@@ -10,14 +10,14 @@ Simulates 1000 concurrent users performing realistic operations:
 Run with:
   locust -f loadtest_dashboard.py --users 1000 --spawn-rate 50 --run-time 5m --host http://localhost:8000
 """
+
 from __future__ import annotations
 
-import json
 import random
 from io import BytesIO
 
-from locust import HttpUser, task, between, events
 from faker import Faker
+from locust import HttpUser, between, events, task
 
 fake = Faker()
 
@@ -27,24 +27,24 @@ fake = Faker()
 # ──────────────────────────────────────────────────────────────────────────────
 
 SAMPLE_HOLDINGS = {
-    'india': [
-        {'symbol': 'RELIANCE', 'yf_ticker': 'RELIANCE.NS', 'name': 'Reliance Industries'},
-        {'symbol': 'HDFCBANK', 'yf_ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank'},
-        {'symbol': 'INFY', 'yf_ticker': 'INFY.NS', 'name': 'Infosys'},
-        {'symbol': 'TCS', 'yf_ticker': 'TCS.NS', 'name': 'Tata Consultancy Services'},
-        {'symbol': 'LT', 'yf_ticker': 'LT.NS', 'name': 'Larsen & Toubro'},
+    "india": [
+        {"symbol": "RELIANCE", "yf_ticker": "RELIANCE.NS", "name": "Reliance Industries"},
+        {"symbol": "HDFCBANK", "yf_ticker": "HDFCBANK.NS", "name": "HDFC Bank"},
+        {"symbol": "INFY", "yf_ticker": "INFY.NS", "name": "Infosys"},
+        {"symbol": "TCS", "yf_ticker": "TCS.NS", "name": "Tata Consultancy Services"},
+        {"symbol": "LT", "yf_ticker": "LT.NS", "name": "Larsen & Toubro"},
     ],
-    'us': [
-        {'symbol': 'AAPL', 'yf_ticker': 'AAPL', 'name': 'Apple Inc'},
-        {'symbol': 'MSFT', 'yf_ticker': 'MSFT', 'name': 'Microsoft'},
-        {'symbol': 'GOOGL', 'yf_ticker': 'GOOGL', 'name': 'Alphabet Inc'},
-        {'symbol': 'AMZN', 'yf_ticker': 'AMZN', 'name': 'Amazon'},
-        {'symbol': 'TSLA', 'yf_ticker': 'TSLA', 'name': 'Tesla'},
+    "us": [
+        {"symbol": "AAPL", "yf_ticker": "AAPL", "name": "Apple Inc"},
+        {"symbol": "MSFT", "yf_ticker": "MSFT", "name": "Microsoft"},
+        {"symbol": "GOOGL", "yf_ticker": "GOOGL", "name": "Alphabet Inc"},
+        {"symbol": "AMZN", "yf_ticker": "AMZN", "name": "Amazon"},
+        {"symbol": "TSLA", "yf_ticker": "TSLA", "name": "Tesla"},
     ],
-    'europe': [
-        {'symbol': 'ADS', 'yf_ticker': 'ADS.DE', 'name': 'Adidas AG'},
-        {'symbol': 'SAP', 'yf_ticker': 'SAP.DE', 'name': 'SAP SE'},
-        {'symbol': 'RIO', 'yf_ticker': 'RIO.L', 'name': 'Rio Tinto'},
+    "europe": [
+        {"symbol": "ADS", "yf_ticker": "ADS.DE", "name": "Adidas AG"},
+        {"symbol": "SAP", "yf_ticker": "SAP.DE", "name": "SAP SE"},
+        {"symbol": "RIO", "yf_ticker": "RIO.L", "name": "Rio Tinto"},
     ],
 }
 
@@ -54,6 +54,7 @@ ALERTS_TRIGGER_RATE = 10  # Percentage of users checking alerts
 # ──────────────────────────────────────────────────────────────────────────────
 # Locust User Classes
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class DashboardUser(HttpUser):
     """
@@ -85,9 +86,9 @@ class DashboardUser(HttpUser):
         Weight: 10 (10% of user operations)
         """
         with self.client.get(
-            '/api/portfolio/markets',
+            "/api/portfolio/markets",
             catch_response=True,
-            name='/api/portfolio/markets',
+            name="/api/portfolio/markets",
         ) as response:
             if response.status_code == 200:
                 markets = response.json()
@@ -107,32 +108,31 @@ class DashboardUser(HttpUser):
         Weight: 15 (15% of user operations)
         """
         try:
-            import openpyxl
             from openpyxl import Workbook
         except ImportError:
             # Fallback: create raw Excel-like bytes
-            excel_data = b'PK\x03\x04'  # ZIP header (Excel is ZIP)
+            excel_data = b"PK\x03\x04"  # ZIP header (Excel is ZIP)
             self.client.post(
-                '/api/portfolio/parse',
-                files={'file': ('portfolio.xlsx', excel_data)},
-                params={'market': self.market},
+                "/api/portfolio/parse",
+                files={"file": ("portfolio.xlsx", excel_data)},
+                params={"market": self.market},
                 catch_response=True,
-                name='/api/portfolio/parse',
+                name="/api/portfolio/parse",
             ).close()
             return
 
         # Create minimal valid Excel
         wb = Workbook()
         ws = wb.active
-        ws['A1'] = 'Symbol'
-        ws['B1'] = 'Quantity'
-        ws['C1'] = 'Purchase Price'
+        ws["A1"] = "Symbol"
+        ws["B1"] = "Quantity"
+        ws["C1"] = "Purchase Price"
 
         # Add sample holdings
         for i, holding in enumerate(SAMPLE_HOLDINGS[self.market][:3], start=2):
-            ws[f'A{i}'] = holding['symbol']
-            ws[f'B{i}'] = random.randint(10, 1000)
-            ws[f'C{i}'] = random.uniform(50, 5000)
+            ws[f"A{i}"] = holding["symbol"]
+            ws[f"B{i}"] = random.randint(10, 1000)
+            ws[f"C{i}"] = random.uniform(50, 5000)
 
         # Write to bytes
         excel_bytes = BytesIO()
@@ -140,15 +140,15 @@ class DashboardUser(HttpUser):
         excel_bytes.seek(0)
 
         with self.client.post(
-            '/api/portfolio/parse',
-            files={'file': ('portfolio.xlsx', excel_bytes.getvalue())},
-            params={'market': self.market},
+            "/api/portfolio/parse",
+            files={"file": ("portfolio.xlsx", excel_bytes.getvalue())},
+            params={"market": self.market},
             catch_response=True,
-            name='/api/portfolio/parse',
+            name="/api/portfolio/parse",
         ) as response:
             if response.status_code == 200:
                 data = response.json()
-                assert 'stocks' in data, "Response should contain stocks"
+                assert "stocks" in data, "Response should contain stocks"
                 response.success()
             else:
                 response.failure(f"Expected 200, got {response.status_code}")
@@ -166,27 +166,27 @@ class DashboardUser(HttpUser):
         holdings = random.sample(SAMPLE_HOLDINGS[self.market], k=min(3, len(SAMPLE_HOLDINGS[self.market])))
 
         payload = {
-            'market': self.market,
-            'holdings': [
+            "market": self.market,
+            "holdings": [
                 {
-                    'yf_ticker': h['yf_ticker'],
-                    'quantity': random.randint(10, 1000),
-                    'purchase_price': random.uniform(50, 5000),
-                    'purchase_date': '2023-01-15',
+                    "yf_ticker": h["yf_ticker"],
+                    "quantity": random.randint(10, 1000),
+                    "purchase_price": random.uniform(50, 5000),
+                    "purchase_date": "2023-01-15",
                 }
                 for h in holdings
             ],
         }
 
         with self.client.post(
-            '/api/portfolio/history',
+            "/api/portfolio/history",
             json=payload,
             catch_response=True,
-            name='/api/portfolio/history',
+            name="/api/portfolio/history",
         ) as response:
             if response.status_code == 200:
                 data = response.json()
-                assert data['market'] == self.market, "Market mismatch"
+                assert data["market"] == self.market, "Market mismatch"
                 response.success()
             elif response.status_code == 422:
                 # Validation error — acceptable in load test
@@ -204,17 +204,17 @@ class DashboardUser(HttpUser):
         Add/remove tickers from watchlist.
         Weight: 25 (25% of user operations)
         """
-        operation = random.choice(['add', 'view', 'remove'])
+        operation = random.choice(["add", "view", "remove"])
 
-        if operation == 'add':
-            tickers = [h['symbol'] for h in random.sample(SAMPLE_HOLDINGS[self.market], k=2)]
-            payload = {'tickers': tickers, 'market': self.market}
+        if operation == "add":
+            tickers = [h["symbol"] for h in random.sample(SAMPLE_HOLDINGS[self.market], k=2)]
+            payload = {"tickers": tickers, "market": self.market}
 
             with self.client.post(
-                '/api/alerts/portfolio',
+                "/api/alerts/portfolio",
                 json=payload,
                 catch_response=True,
-                name='/api/alerts/portfolio [POST]',
+                name="/api/alerts/portfolio [POST]",
             ) as response:
                 if response.status_code == 200:
                     self.watchlist.extend(tickers)
@@ -222,23 +222,23 @@ class DashboardUser(HttpUser):
                 else:
                     response.failure(f"Expected 200, got {response.status_code}")
 
-        elif operation == 'view':
+        elif operation == "view":
             with self.client.get(
-                '/api/alerts/portfolio',
+                "/api/alerts/portfolio",
                 catch_response=True,
-                name='/api/alerts/portfolio [GET]',
+                name="/api/alerts/portfolio [GET]",
             ) as response:
                 if response.status_code == 200:
                     response.success()
                 else:
                     response.failure(f"Expected 200, got {response.status_code}")
 
-        elif operation == 'remove' and self.watchlist:
+        elif operation == "remove" and self.watchlist:
             ticker = random.choice(self.watchlist)
             with self.client.delete(
-                f'/api/alerts/portfolio/{ticker}',
+                f"/api/alerts/portfolio/{ticker}",
                 catch_response=True,
-                name='/api/alerts/portfolio/{ticker} [DELETE]',
+                name="/api/alerts/portfolio/{ticker} [DELETE]",
             ) as response:
                 if response.status_code == 200:
                     self.watchlist.remove(ticker)
@@ -259,13 +259,13 @@ class DashboardUser(HttpUser):
         limit = random.randint(5, 50)
 
         with self.client.get(
-            f'/api/alerts/latest?limit={limit}',
+            f"/api/alerts/latest?limit={limit}",
             catch_response=True,
-            name='/api/alerts/latest',
+            name="/api/alerts/latest",
         ) as response:
             if response.status_code == 200:
                 data = response.json()
-                assert 'alerts' in data, "Response should contain alerts"
+                assert "alerts" in data, "Response should contain alerts"
                 response.success()
             else:
                 response.failure(f"Expected 200, got {response.status_code}")
@@ -280,12 +280,12 @@ class DashboardUser(HttpUser):
         Manually trigger an alert for testing.
         Weight: 5 (5% of user operations)
         """
-        ticker = random.choice([h['symbol'] for h in SAMPLE_HOLDINGS[self.market]])
+        ticker = random.choice([h["symbol"] for h in SAMPLE_HOLDINGS[self.market]])
 
         with self.client.post(
-            f'/api/alerts/trigger/{ticker}?market={self.market}',
+            f"/api/alerts/trigger/{ticker}?market={self.market}",
             catch_response=True,
-            name='/api/alerts/trigger/{ticker}',
+            name="/api/alerts/trigger/{ticker}",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -304,17 +304,18 @@ class StressTestUser(HttpUser):
     @task
     def rapid_market_queries(self):
         """Rapidly query markets endpoint."""
-        self.client.get('/api/portfolio/markets')
+        self.client.get("/api/portfolio/markets")
 
     @task
     def rapid_alert_checks(self):
         """Rapidly check alerts."""
-        self.client.get('/api/alerts/latest?limit=10')
+        self.client.get("/api/alerts/latest?limit=10")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Locust Event Listeners (Reporting & Monitoring)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
@@ -335,11 +336,7 @@ def on_test_stop(environment, **kwargs):
     stats = environment.stats
     total_requests = stats.total.num_requests
     total_failures = stats.total.num_failures
-    success_rate = (
-        ((total_requests - total_failures) / total_requests * 100)
-        if total_requests > 0
-        else 0
-    )
+    success_rate = ((total_requests - total_failures) / total_requests * 100) if total_requests > 0 else 0
 
     print(f"Total Requests: {total_requests}")
     print(f"Total Failures: {total_failures}")

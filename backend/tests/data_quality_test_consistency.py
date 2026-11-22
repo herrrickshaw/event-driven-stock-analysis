@@ -10,17 +10,18 @@ Test cases:
 - Missing data detection
 - Duplicate detection
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 import pytest
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Data Consistency Validator
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class DataConsistencyValidator:
     """Validates consistency between data sources."""
@@ -34,12 +35,12 @@ class DataConsistencyValidator:
     def validate_ticker_format(ticker: str, market: str) -> bool:
         """Validate ticker format based on market."""
         market_patterns = {
-            'india': lambda t: t.endswith('.NS') or t.endswith('.BO') or not ('.' in t),
-            'us': lambda t: not ('.' in t) or t.endswith('.US'),
-            'europe': lambda t: '.' in t,  # Must have exchange suffix
-            'japan': lambda t: t.endswith('.T'),
-            'korea': lambda t: t.endswith('.KS') or t.endswith('.KQ'),
-            'china': lambda t: t.endswith('.SS') or t.endswith('.SZ'),
+            "india": lambda t: t.endswith(".NS") or t.endswith(".BO") or not ("." in t),
+            "us": lambda t: not ("." in t) or t.endswith(".US"),
+            "europe": lambda t: "." in t,  # Must have exchange suffix
+            "japan": lambda t: t.endswith(".T"),
+            "korea": lambda t: t.endswith(".KS") or t.endswith(".KQ"),
+            "china": lambda t: t.endswith(".SS") or t.endswith(".SZ"),
         }
 
         validator = market_patterns.get(market)
@@ -53,12 +54,12 @@ class DataConsistencyValidator:
 
         # Market-specific ranges (local currency)
         ranges = {
-            'india': (1.0, 100000.0),      # ₹1 to ₹100k
-            'us': (0.01, 10000.0),         # $0.01 to $10k
-            'europe': (0.01, 10000.0),     # € (similar to USD)
-            'japan': (1.0, 100000.0),      # ¥ (similar to INR)
-            'korea': (1.0, 1000000.0),     # ₩ (large numbers)
-            'china': (0.01, 10000.0),      # ¥ (similar to USD)
+            "india": (1.0, 100000.0),  # ₹1 to ₹100k
+            "us": (0.01, 10000.0),  # $0.01 to $10k
+            "europe": (0.01, 10000.0),  # € (similar to USD)
+            "japan": (1.0, 100000.0),  # ¥ (similar to INR)
+            "korea": (1.0, 1000000.0),  # ₩ (large numbers)
+            "china": (0.01, 10000.0),  # ¥ (similar to USD)
         }
 
         min_price, max_price = ranges.get(market, (0.01, 100000.0))
@@ -77,12 +78,12 @@ class DataConsistencyValidator:
 
         # Expected volume ranges (daily)
         min_volumes = {
-            'india': 10000,      # Very liquid markets
-            'us': 100000,
-            'europe': 10000,
-            'japan': 10000,
-            'korea': 10000,
-            'china': 10000,
+            "india": 10000,  # Very liquid markets
+            "us": 100000,
+            "europe": 10000,
+            "japan": 10000,
+            "korea": 10000,
+            "china": 10000,
         }
 
         min_volume = min_volumes.get(market, 10000)
@@ -98,12 +99,12 @@ class DataConsistencyValidator:
 
         # Market cap ranges (USD equivalent)
         ranges = {
-            'india': (1_000_000, 500_000_000_000),           # $1M to $500B
-            'us': (1_000_000, 3_000_000_000_000),            # $1M to $3T
-            'europe': (1_000_000, 3_000_000_000_000),
-            'japan': (1_000_000, 3_000_000_000_000),
-            'korea': (1_000_000, 1_000_000_000_000),
-            'china': (1_000_000, 3_000_000_000_000),
+            "india": (1_000_000, 500_000_000_000),  # $1M to $500B
+            "us": (1_000_000, 3_000_000_000_000),  # $1M to $3T
+            "europe": (1_000_000, 3_000_000_000_000),
+            "japan": (1_000_000, 3_000_000_000_000),
+            "korea": (1_000_000, 1_000_000_000_000),
+            "china": (1_000_000, 3_000_000_000_000),
         }
 
         min_cap, max_cap = ranges.get(market, (1_000_000, 3_000_000_000_000))
@@ -113,7 +114,7 @@ class DataConsistencyValidator:
     def validate_timestamp_freshness(timestamp: str, max_age_days: int = 7) -> bool:
         """Check that timestamp is recent."""
         try:
-            ts = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            ts = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             age = datetime.now(timezone.utc) - ts
             return age <= timedelta(days=max_age_days)
         except (ValueError, TypeError):
@@ -126,7 +127,7 @@ class DataConsistencyValidator:
         for row in rows:
             for field in required_fields:
                 if field not in row or row[field] is None:
-                    missing.append({'row': row, 'missing_field': field})
+                    missing.append({"row": row, "missing_field": field})
         return missing
 
     @staticmethod
@@ -151,13 +152,13 @@ class DataConsistencyValidator:
     def reconcile_rows(
         cassandra_row: Dict[str, Any],
         postgres_row: Dict[str, Any],
-        match_key: str = 'ticker',
+        match_key: str = "ticker",
     ) -> Dict[str, Any]:
         """Compare individual row values."""
         differences = {}
 
         # Compare numeric fields
-        numeric_fields = ['cmp', 'rsi', 'volume', 'market_cap', 'pe', 'pb', 'roe']
+        numeric_fields = ["cmp", "rsi", "volume", "market_cap", "pe", "pb", "roe"]
         for field in numeric_fields:
             cass_val = cassandra_row.get(field, 0)
             pg_val = postgres_row.get(field, 0)
@@ -167,18 +168,18 @@ class DataConsistencyValidator:
                 pct_diff = abs(cass_val - pg_val) / max(abs(cass_val), abs(pg_val))
                 if pct_diff > 0.01:
                     differences[field] = {
-                        'cassandra': cass_val,
-                        'postgres': pg_val,
-                        'pct_diff': pct_diff,
+                        "cassandra": cass_val,
+                        "postgres": pg_val,
+                        "pct_diff": pct_diff,
                     }
 
         # Compare string fields (exact match)
-        string_fields = ['symbol', 'name', 'exchange', 'country']
+        string_fields = ["symbol", "name", "exchange", "country"]
         for field in string_fields:
             if cassandra_row.get(field) != postgres_row.get(field):
                 differences[field] = {
-                    'cassandra': cassandra_row.get(field),
-                    'postgres': postgres_row.get(field),
+                    "cassandra": cassandra_row.get(field),
+                    "postgres": postgres_row.get(field),
                 }
 
         return differences
@@ -188,6 +189,7 @@ class DataConsistencyValidator:
 # Unit Tests: Ticker Format Validation
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.data_quality
 class TestTickerFormatValidation:
     """Test ticker format validation."""
@@ -196,49 +198,50 @@ class TestTickerFormatValidation:
         """Test valid India ticker formats."""
         validator = DataConsistencyValidator.validate_ticker_format
 
-        assert validator('RELIANCE.NS', 'india') is True
-        assert validator('RELIANCE.BO', 'india') is True
-        assert validator('RELIANCE', 'india') is True  # Bare format
-        assert validator('RELIANCE-US', 'india') is False
+        assert validator("RELIANCE.NS", "india") is True
+        assert validator("RELIANCE.BO", "india") is True
+        assert validator("RELIANCE", "india") is True  # Bare format
+        assert validator("RELIANCE-US", "india") is False
 
     def test_us_ticker_formats(self):
         """Test valid US ticker formats."""
         validator = DataConsistencyValidator.validate_ticker_format
 
-        assert validator('AAPL', 'us') is True
-        assert validator('BRK.B', 'us') is True
-        assert validator('AAPL.US', 'us') is True
-        assert validator('AAPL.NS', 'us') is False
+        assert validator("AAPL", "us") is True
+        assert validator("BRK.B", "us") is True
+        assert validator("AAPL.US", "us") is True
+        assert validator("AAPL.NS", "us") is False
 
     def test_europe_ticker_formats(self):
         """Test valid European ticker formats."""
         validator = DataConsistencyValidator.validate_ticker_format
 
-        assert validator('ADS.DE', 'europe') is True
-        assert validator('RIO.L', 'europe') is True
-        assert validator('MC.PA', 'europe') is True
-        assert validator('SAP', 'europe') is False  # Must have suffix
+        assert validator("ADS.DE", "europe") is True
+        assert validator("RIO.L", "europe") is True
+        assert validator("MC.PA", "europe") is True
+        assert validator("SAP", "europe") is False  # Must have suffix
 
     def test_japan_ticker_formats(self):
         """Test valid Japan ticker formats."""
         validator = DataConsistencyValidator.validate_ticker_format
 
-        assert validator('7203.T', 'japan') is True
-        assert validator('9984.T', 'japan') is True
-        assert validator('7203', 'japan') is False
+        assert validator("7203.T", "japan") is True
+        assert validator("9984.T", "japan") is True
+        assert validator("7203", "japan") is False
 
     def test_korea_ticker_formats(self):
         """Test valid Korea ticker formats."""
         validator = DataConsistencyValidator.validate_ticker_format
 
-        assert validator('005930.KS', 'korea') is True
-        assert validator('035420.KQ', 'korea') is True
-        assert validator('005930', 'korea') is False
+        assert validator("005930.KS", "korea") is True
+        assert validator("035420.KQ", "korea") is True
+        assert validator("005930", "korea") is False
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Price and Volume Validation
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.data_quality
 class TestPriceVolumeValidation:
@@ -248,56 +251,57 @@ class TestPriceVolumeValidation:
         """Test valid India stock prices."""
         validator = DataConsistencyValidator.validate_price_range
 
-        assert validator(2875.5, 'india') is True   # RELIANCE
-        assert validator(1680.5, 'india') is True   # HDFC
-        assert validator(0.50, 'india') is False    # Too low
-        assert validator(100000.1, 'india') is False  # Too high
+        assert validator(2875.5, "india") is True  # RELIANCE
+        assert validator(1680.5, "india") is True  # HDFC
+        assert validator(0.50, "india") is False  # Too low
+        assert validator(100000.1, "india") is False  # Too high
 
     def test_valid_us_prices(self):
         """Test valid US stock prices."""
         validator = DataConsistencyValidator.validate_price_range
 
-        assert validator(196.8, 'us') is True     # AAPL
-        assert validator(150.0, 'us') is True
-        assert validator(0.001, 'us') is False    # Too low
-        assert validator(10000.1, 'us') is False  # Too high
+        assert validator(196.8, "us") is True  # AAPL
+        assert validator(150.0, "us") is True
+        assert validator(0.001, "us") is False  # Too low
+        assert validator(10000.1, "us") is False  # Too high
 
     def test_negative_prices(self):
         """Test that negative prices are rejected."""
         validator = DataConsistencyValidator.validate_price_range
 
-        assert validator(-100.0, 'india') is False
-        assert validator(-50.0, 'us') is False
+        assert validator(-100.0, "india") is False
+        assert validator(-50.0, "us") is False
 
     def test_zero_price(self):
         """Test that zero prices are rejected."""
         validator = DataConsistencyValidator.validate_price_range
 
-        assert validator(0.0, 'india') is False
+        assert validator(0.0, "india") is False
 
     def test_valid_volumes(self):
         """Test valid trading volumes."""
         validator = DataConsistencyValidator.validate_volume
 
-        assert validator(45_000_000, 'india') is True
-        assert validator(52_000_000, 'us') is True
-        assert validator(100_000, 'india') is True
-        assert validator(-1_000_000, 'india') is False
-        assert validator(0, 'india') is False
+        assert validator(45_000_000, "india") is True
+        assert validator(52_000_000, "us") is True
+        assert validator(100_000, "india") is True
+        assert validator(-1_000_000, "india") is False
+        assert validator(0, "india") is False
 
     def test_market_cap_validation(self):
         """Test market cap validation."""
         validator = DataConsistencyValidator.validate_market_cap
 
-        assert validator(2_850_000_000_000, 'india') is True   # RELIANCE
-        assert validator(3_000_000_000_000, 'us') is True      # AAPL
-        assert validator(100, 'india') is False                 # Too small
-        assert validator(-1_000_000, 'india') is False
+        assert validator(2_850_000_000_000, "india") is True  # RELIANCE
+        assert validator(3_000_000_000_000, "us") is True  # AAPL
+        assert validator(100, "india") is False  # Too small
+        assert validator(-1_000_000, "india") is False
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: RSI Validation
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.data_quality
 class TestRSIValidation:
@@ -325,6 +329,7 @@ class TestRSIValidation:
 # Unit Tests: Timestamp Validation
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.data_quality
 class TestTimestampValidation:
     """Test timestamp freshness validation."""
@@ -347,12 +352,13 @@ class TestTimestampValidation:
         """Test that malformed timestamp is invalid."""
         validator = DataConsistencyValidator.validate_timestamp_freshness
 
-        assert validator('invalid-date', max_age_days=7) is False
+        assert validator("invalid-date", max_age_days=7) is False
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Integration Tests: Missing Values Detection
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.data_quality
 class TestMissingValuesDetection:
@@ -360,29 +366,23 @@ class TestMissingValuesDetection:
 
     def test_detect_missing_rsi(self, sample_cassandra_rows):
         """Test detection of missing RSI values."""
-        rows = [
-            {**row, 'rsi': None}
-            for row in sample_cassandra_rows
-        ]
+        rows = [{**row, "rsi": None} for row in sample_cassandra_rows]
 
-        missing = DataConsistencyValidator.find_missing_values(rows, ['rsi'])
+        missing = DataConsistencyValidator.find_missing_values(rows, ["rsi"])
         assert len(missing) == len(rows)
 
     def test_detect_missing_price(self, sample_cassandra_rows):
         """Test detection of missing price."""
-        rows = [
-            {**row, 'cmp': None}
-            for row in sample_cassandra_rows
-        ]
+        rows = [{**row, "cmp": None} for row in sample_cassandra_rows]
 
-        missing = DataConsistencyValidator.find_missing_values(rows, ['cmp'])
+        missing = DataConsistencyValidator.find_missing_values(rows, ["cmp"])
         assert len(missing) == len(rows)
 
     def test_no_missing_required_fields(self, sample_cassandra_rows):
         """Test that complete rows pass validation."""
         missing = DataConsistencyValidator.find_missing_values(
             sample_cassandra_rows,
-            ['market', 'yf_ticker', 'cmp'],
+            ["market", "yf_ticker", "cmp"],
         )
         assert len(missing) == 0
 
@@ -391,6 +391,7 @@ class TestMissingValuesDetection:
 # Integration Tests: Duplicate Detection
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.data_quality
 class TestDuplicateDetection:
     """Test detection of duplicate rows."""
@@ -398,27 +399,27 @@ class TestDuplicateDetection:
     def test_detect_duplicate_tickers(self):
         """Test detection of duplicate ticker entries."""
         rows = [
-            {'market': 'india', 'yf_ticker': 'RELIANCE.NS', 'cmp': 2875.5},
-            {'market': 'india', 'yf_ticker': 'RELIANCE.NS', 'cmp': 2875.5},
+            {"market": "india", "yf_ticker": "RELIANCE.NS", "cmp": 2875.5},
+            {"market": "india", "yf_ticker": "RELIANCE.NS", "cmp": 2875.5},
         ]
 
         duplicates = DataConsistencyValidator.find_duplicates(
             rows,
-            key_fields=['market', 'yf_ticker'],
+            key_fields=["market", "yf_ticker"],
         )
         assert len(duplicates) > 0
 
     def test_no_duplicates_unique_tickers(self):
         """Test that unique tickers pass validation."""
         rows = [
-            {'market': 'india', 'yf_ticker': 'RELIANCE.NS'},
-            {'market': 'india', 'yf_ticker': 'INFY.NS'},
-            {'market': 'us', 'yf_ticker': 'AAPL'},
+            {"market": "india", "yf_ticker": "RELIANCE.NS"},
+            {"market": "india", "yf_ticker": "INFY.NS"},
+            {"market": "us", "yf_ticker": "AAPL"},
         ]
 
         duplicates = DataConsistencyValidator.find_duplicates(
             rows,
-            key_fields=['market', 'yf_ticker'],
+            key_fields=["market", "yf_ticker"],
         )
         assert len(duplicates) == 0
 
@@ -426,6 +427,7 @@ class TestDuplicateDetection:
 # ──────────────────────────────────────────────────────────────────────────────
 # Integration Tests: Row Reconciliation
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.data_quality
 class TestRowReconciliation:
@@ -445,38 +447,39 @@ class TestRowReconciliation:
     def test_price_difference_detection(self):
         """Test detection of price differences."""
         cass = {
-            'ticker': 'RELIANCE.NS',
-            'cmp': 2875.5,
-            'symbol': 'RELIANCE',
-            'name': 'Reliance',
+            "ticker": "RELIANCE.NS",
+            "cmp": 2875.5,
+            "symbol": "RELIANCE",
+            "name": "Reliance",
         }
         pg = {
-            'ticker': 'RELIANCE.NS',
-            'last_price': 2900.0,  # Different price
-            'symbol': 'RELIANCE',
-            'name': 'Reliance',
+            "ticker": "RELIANCE.NS",
+            "last_price": 2900.0,  # Different price
+            "symbol": "RELIANCE",
+            "name": "Reliance",
         }
 
         # Would need to map field names in real implementation
-        assert cass['cmp'] != pg['last_price']
+        assert cass["cmp"] != pg["last_price"]
 
     def test_name_difference_detection(self):
         """Test detection of name differences."""
         cass = {
-            'ticker': 'RELIANCE.NS',
-            'name': 'Reliance Industries Limited',
+            "ticker": "RELIANCE.NS",
+            "name": "Reliance Industries Limited",
         }
         pg = {
-            'ticker': 'RELIANCE.NS',
-            'name': 'Reliance Industries',  # Different
+            "ticker": "RELIANCE.NS",
+            "name": "Reliance Industries",  # Different
         }
 
-        assert cass['name'] != pg['name']
+        assert cass["name"] != pg["name"]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Integration Tests: Full Consistency Check
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.data_quality
 class TestFullConsistencyCheck:
@@ -493,28 +496,28 @@ class TestFullConsistencyCheck:
     def test_all_tickers_present_in_both(self):
         """Test that all tickers exist in both databases."""
         cass_rows = [
-            {'market': 'india', 'yf_ticker': 'RELIANCE.NS'},
-            {'market': 'india', 'yf_ticker': 'INFY.NS'},
+            {"market": "india", "yf_ticker": "RELIANCE.NS"},
+            {"market": "india", "yf_ticker": "INFY.NS"},
         ]
         pg_rows = [
-            {'market': 'india', 'ticker': 'RELIANCE.NS'},
-            {'market': 'india', 'ticker': 'INFY.NS'},
+            {"market": "india", "ticker": "RELIANCE.NS"},
+            {"market": "india", "ticker": "INFY.NS"},
         ]
 
-        cass_tickers = {(r['market'], r['yf_ticker']) for r in cass_rows}
-        pg_tickers = {(r['market'], r['ticker']) for r in pg_rows}
+        cass_tickers = {(r["market"], r["yf_ticker"]) for r in cass_rows}
+        pg_tickers = {(r["market"], r["ticker"]) for r in pg_rows}
 
         assert cass_tickers == pg_tickers
 
     def test_market_coverage_by_source(self):
         """Test that each source covers expected markets."""
         cass_rows = [
-            {'market': 'india'},
-            {'market': 'us'},
-            {'market': 'europe'},
+            {"market": "india"},
+            {"market": "us"},
+            {"market": "europe"},
         ]
 
-        markets = {r['market'] for r in cass_rows}
-        assert 'india' in markets
-        assert 'us' in markets
-        assert 'europe' in markets
+        markets = {r["market"] for r in cass_rows}
+        assert "india" in markets
+        assert "us" in markets
+        assert "europe" in markets

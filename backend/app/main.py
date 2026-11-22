@@ -1,13 +1,15 @@
 """
 FastAPI application factory and configuration.
 """
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 from config.settings import settings
 from models import init_db
-from routers import portfolio, risk, rebalance, alerts, reports
-from utils import APIError, setup_logging, get_logger
+from routers import alerts, portfolio, rebalance, reports, risk
+from utils import APIError, get_logger, setup_logging
 
 logger = get_logger(__name__)
 

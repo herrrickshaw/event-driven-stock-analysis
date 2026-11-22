@@ -15,23 +15,25 @@ see events/event_bus.py, events/portfolio_monitor.py):
 - POST   /api/alerts/trigger/{ticker}     - Manually publish a market event for one ticker
 - GET    /api/alerts/stream               - SSE stream of live market events
 """
+
 import json
 from typing import Any, AsyncGenerator, Dict, List
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+
+from events.event_bus import MarketEvent, bus
+from events.portfolio_monitor import monitor
 from models import get_db
-from services import AlertEngineService
 from schemas.alert import (
     AlertStatusResponse,
     AlertTriggerRequest,
     AlertTriggerResponse,
     WatchlistAddRequest,
 )
-from events.event_bus import MarketEvent, bus
-from events.portfolio_monitor import monitor
-from utils import PortfolioNotFoundError, get_logger
+from services import AlertEngineService
+from utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -57,7 +59,7 @@ async def get_alert_status(
     Returns:
         AlertStatusResponse with alert summary
     """
-    service = AlertEngineService(db)
+    service = AlertEngineService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
     logger.info(f"Fetching alert status for portfolio_id={portfolio_id}")
 
@@ -87,11 +89,9 @@ async def trigger_alerts(
     Returns:
         AlertTriggerResponse with triggered alerts
     """
-    service = AlertEngineService(db)
+    service = AlertEngineService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Triggering alerts for portfolio_id={request.portfolio_id}, types={request.alert_types}"
-    )
+    logger.info(f"Triggering alerts for portfolio_id={request.portfolio_id}, types={request.alert_types}")
 
     # TODO: Call service to trigger alerts
     # response = service.trigger_alerts(

@@ -1,7 +1,9 @@
 """
 Unit tests for portfolio analyzer service.
 """
+
 import pytest
+
 from services import PortfolioAnalyzerService
 
 

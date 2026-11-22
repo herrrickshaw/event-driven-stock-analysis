@@ -6,17 +6,19 @@ Endpoints:
 - POST   /api/rebalance/drift    - Check portfolio drift
 - POST   /api/rebalance/execute  - Execute rebalancing
 """
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from models import get_db
-from services import RebalancingEngineService
 from schemas.rebalance import (
-    RebalanceScheduleRequest,
     RebalanceDriftRequest,
     RebalanceDriftResponse,
     RebalanceExecutionResponse,
+    RebalanceScheduleRequest,
 )
-from utils import PortfolioNotFoundError, get_logger
+from services import RebalancingEngineService
+from utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -42,11 +44,9 @@ async def schedule_rebalancing(
     Returns:
         Dictionary with scheduling confirmation
     """
-    service = RebalancingEngineService(db)
+    service = RebalancingEngineService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Scheduling rebalancing for portfolio_id={request.portfolio_id}, type={request.rebalance_type}"
-    )
+    logger.info(f"Scheduling rebalancing for portfolio_id={request.portfolio_id}, type={request.rebalance_type}")
 
     # TODO: Call service to schedule rebalancing
     # event = service.schedule_rebalancing(
@@ -80,11 +80,9 @@ async def check_drift(
     Returns:
         RebalanceDriftResponse with drift analysis
     """
-    service = RebalancingEngineService(db)
+    service = RebalancingEngineService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Checking drift for portfolio_id={request.portfolio_id}, threshold={request.drift_threshold_pct}%"
-    )
+    logger.info(f"Checking drift for portfolio_id={request.portfolio_id}, threshold={request.drift_threshold_pct}%")
 
     # TODO: Call service to calculate drift
     # drift = service.calculate_drift(
@@ -117,11 +115,9 @@ async def execute_rebalancing(
     Returns:
         RebalanceExecutionResponse with execution details
     """
-    service = RebalancingEngineService(db)
+    service = RebalancingEngineService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
-    logger.info(
-        f"Executing rebalancing for portfolio_id={portfolio_id}, dry_run={dry_run}"
-    )
+    logger.info(f"Executing rebalancing for portfolio_id={portfolio_id}, dry_run={dry_run}")
 
     # TODO: Call service to execute rebalancing
     # execution = service.execute_rebalancing(portfolio_id)

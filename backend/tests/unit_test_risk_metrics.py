@@ -8,6 +8,7 @@ Test cases:
 - Beta calculation
 - Sharpe ratio
 """
+
 from __future__ import annotations
 
 import math
@@ -15,7 +16,6 @@ import statistics
 from typing import List
 
 import pytest
-import numpy as np
 
 
 class RiskMetricsCalculator:
@@ -76,9 +76,7 @@ class RiskMetricsCalculator:
         mean_a = statistics.mean(returns_a)
         mean_b = statistics.mean(returns_b)
 
-        covariance = sum((a - mean_a) * (b - mean_b) for a, b in zip(returns_a, returns_b)) / (
-            len(returns_a) - 1
-        )
+        covariance = sum((a - mean_a) * (b - mean_b) for a, b in zip(returns_a, returns_b)) / (len(returns_a) - 1)
         std_a = statistics.stdev(returns_a)
         std_b = statistics.stdev(returns_b)
 
@@ -96,9 +94,7 @@ class RiskMetricsCalculator:
         mean_a = statistics.mean(returns_a)
         mean_b = statistics.mean(returns_b)
 
-        return sum((a - mean_a) * (b - mean_b) for a, b in zip(returns_a, returns_b)) / (
-            len(returns_a) - 1
-        )
+        return sum((a - mean_a) * (b - mean_b) for a, b in zip(returns_a, returns_b)) / (len(returns_a) - 1)
 
     @staticmethod
     def calculate_beta(
@@ -157,6 +153,7 @@ class RiskMetricsCalculator:
 # Unit Tests: Volatility
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestVolatility:
     """Test volatility calculations."""
@@ -189,7 +186,7 @@ class TestVolatility:
 
     def test_annualized_volatility(self, sample_returns_series):
         """Test annualized volatility conversion."""
-        daily_returns = sample_returns_series['RELIANCE.NS']
+        daily_returns = sample_returns_series["RELIANCE.NS"]
         ann_vol = RiskMetricsCalculator.calculate_annualized_volatility(daily_returns)
 
         daily_vol = statistics.stdev(daily_returns)
@@ -211,6 +208,7 @@ class TestVolatility:
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Value at Risk (VaR)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestValueAtRisk:
@@ -236,7 +234,7 @@ class TestValueAtRisk:
     def test_var_parametric_positive_return(self):
         """Test parametric VaR with positive expected return."""
         mean_return = 0.05  # 5% expected annual return
-        volatility = 0.20   # 20% annual volatility
+        volatility = 0.20  # 20% annual volatility
         portfolio_value = 100000.0
 
         var = RiskMetricsCalculator.calculate_var_parametric(
@@ -249,7 +247,7 @@ class TestValueAtRisk:
 
     def test_var_parametric_vs_historical(self, sample_returns_series):
         """Compare parametric and historical VaR."""
-        returns = sample_returns_series['RELIANCE.NS']
+        returns = sample_returns_series["RELIANCE.NS"]
 
         mean_ret = statistics.mean(returns)
         vol = statistics.stdev(returns)
@@ -270,6 +268,7 @@ class TestValueAtRisk:
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Correlation & Covariance
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestCorrelation:
@@ -302,8 +301,8 @@ class TestCorrelation:
 
     def test_correlation_sample_portfolio(self, sample_returns_series):
         """Test correlation between real portfolio stocks."""
-        returns_reliance = sample_returns_series['RELIANCE.NS']
-        returns_hdfc = sample_returns_series['HDFCBANK.NS']
+        returns_reliance = sample_returns_series["RELIANCE.NS"]
+        returns_hdfc = sample_returns_series["HDFCBANK.NS"]
 
         corr = RiskMetricsCalculator.calculate_correlation(returns_reliance, returns_hdfc)
 
@@ -335,6 +334,7 @@ class TestCorrelation:
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Beta
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestBeta:
@@ -377,6 +377,7 @@ class TestBeta:
 # Unit Tests: Sharpe Ratio
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestSharpeRatio:
     """Test Sharpe ratio calculations."""
@@ -387,9 +388,7 @@ class TestSharpeRatio:
         portfolio_volatility = 0.10  # 10%
         risk_free_rate = 0.05  # 5%
 
-        sharpe = RiskMetricsCalculator.calculate_sharpe_ratio(
-            portfolio_return, portfolio_volatility, risk_free_rate
-        )
+        sharpe = RiskMetricsCalculator.calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate)
 
         expected = (0.15 - 0.05) / 0.10  # = 1.0
         assert abs(sharpe - expected) < 1e-6
@@ -400,9 +399,7 @@ class TestSharpeRatio:
         portfolio_volatility = 0.10
         risk_free_rate = 0.05
 
-        sharpe = RiskMetricsCalculator.calculate_sharpe_ratio(
-            portfolio_return, portfolio_volatility, risk_free_rate
-        )
+        sharpe = RiskMetricsCalculator.calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate)
 
         assert sharpe < 0  # Negative Sharpe
 
@@ -419,12 +416,8 @@ class TestSharpeRatio:
         portfolio_b_return = 0.14
         portfolio_b_vol = 0.12
 
-        sharpe_a = RiskMetricsCalculator.calculate_sharpe_ratio(
-            portfolio_a_return, portfolio_a_vol
-        )
-        sharpe_b = RiskMetricsCalculator.calculate_sharpe_ratio(
-            portfolio_b_return, portfolio_b_vol
-        )
+        sharpe_a = RiskMetricsCalculator.calculate_sharpe_ratio(portfolio_a_return, portfolio_a_vol)
+        sharpe_b = RiskMetricsCalculator.calculate_sharpe_ratio(portfolio_b_return, portfolio_b_vol)
 
         # A has better risk-adjusted return
         assert sharpe_a > sharpe_b
@@ -433,6 +426,7 @@ class TestSharpeRatio:
 # ──────────────────────────────────────────────────────────────────────────────
 # Unit Tests: Maximum Drawdown
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestMaximumDrawdown:
@@ -471,7 +465,7 @@ class TestMaximumDrawdown:
 
         # 1 → 0.95 → 0.9025 → 0.857375
         # DD = (1 - 0.857375) / 1 ≈ 0.1426
-        expected = 1 - (0.95 ** 3)
+        expected = 1 - (0.95**3)
         assert abs(dd - expected) < 0.001
 
 
@@ -479,19 +473,20 @@ class TestMaximumDrawdown:
 # Integration Tests: Risk Metrics
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestRiskMetricsIntegration:
     """Test combinations of risk metrics."""
 
     def test_portfolio_risk_profile(self, sample_returns_series):
         """Test complete portfolio risk profile."""
-        returns = sample_returns_series['RELIANCE.NS']
+        returns = sample_returns_series["RELIANCE.NS"]
 
         vol = RiskMetricsCalculator.calculate_volatility(returns)
         ann_vol = RiskMetricsCalculator.calculate_annualized_volatility(returns)
         var_95 = RiskMetricsCalculator.calculate_var_historical(returns, 0.95)
         var_99 = RiskMetricsCalculator.calculate_var_historical(returns, 0.99)
-        sharpe = RiskMetricsCalculator.calculate_sharpe_ratio(0.10, ann_vol)
+        RiskMetricsCalculator.calculate_sharpe_ratio(0.10, ann_vol)
 
         # Validate relationships
         assert ann_vol == vol * math.sqrt(252)
@@ -500,8 +495,8 @@ class TestRiskMetricsIntegration:
 
     def test_diversification_benefit(self, sample_returns_series):
         """Test that diversification reduces portfolio risk."""
-        returns_a = sample_returns_series['RELIANCE.NS']
-        returns_b = sample_returns_series['HDFCBANK.NS']
+        returns_a = sample_returns_series["RELIANCE.NS"]
+        returns_b = sample_returns_series["HDFCBANK.NS"]
 
         vol_a = RiskMetricsCalculator.calculate_volatility(returns_a)
         vol_b = RiskMetricsCalculator.calculate_volatility(returns_b)

@@ -10,6 +10,7 @@ Not a distributed message broker (no Kafka here) -- a single-process bus
 scoped to one API server instance, which is what the alerts router and its
 SSE stream need.
 """
+
 from __future__ import annotations
 
 import inspect

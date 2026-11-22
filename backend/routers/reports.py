@@ -5,15 +5,17 @@ Endpoints:
 - POST   /api/reports/daily   - Generate daily report
 - POST   /api/reports/monthly - Generate monthly report
 """
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from models import get_db
-from services import ReportingService
 from schemas.report import (
     DailyReportResponse,
     MonthlyReportResponse,
 )
-from utils import PortfolioNotFoundError, get_logger
+from services import ReportingService
+from utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -39,7 +41,7 @@ async def generate_daily_report(
     Returns:
         DailyReportResponse with daily metrics and analysis
     """
-    service = ReportingService(db)
+    service = ReportingService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
     logger.info(f"Generating daily report for portfolio_id={portfolio_id}")
 
@@ -74,7 +76,7 @@ async def generate_monthly_report(
     Returns:
         MonthlyReportResponse with monthly metrics and analysis
     """
-    service = ReportingService(db)
+    service = ReportingService(db)  # noqa: F841 - placeholder until the TODO below is implemented
 
     logger.info(f"Generating monthly report for portfolio_id={portfolio_id}, month={month}")
 
