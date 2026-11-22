@@ -61,16 +61,17 @@ jobs:
             -v
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         if: matrix.python-version == '3.11'
         with:
           files: ./coverage.xml
           flags: backend
           name: backend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: backend-test-results-${{ matrix.python-version }}
@@ -108,16 +109,17 @@ jobs:
             --collectCoverageFrom="!src/reportWebVitals.js"
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         if: matrix.node-version == '20.x'
         with:
           files: ./frontend/coverage/coverage-final.json
           flags: frontend
           name: frontend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: frontend-test-results-${{ matrix.node-version }}
@@ -171,7 +173,7 @@ jobs:
         run: bandit -r backend/ -f json -o bandit-report.json
 
       - name: Upload Bandit report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: bandit-security-report
@@ -204,7 +206,7 @@ jobs:
         run: npx prettier --check src/
 
       - name: Upload ESLint report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: eslint-report
@@ -376,7 +378,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: trivy-*.sarif
@@ -566,7 +568,10 @@ jobs:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
     needs: [deploy-staging, deploy-production-canary]
-    if: always()
+    # Only report when a deploy ran (both are skipped on pull requests).
+    if: always() && (needs.deploy-staging.result != 'skipped' || needs.deploy-production-canary.result != 'skipped')
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Determine status
         id: status
@@ -578,8 +583,12 @@ jobs:
             echo "status=success" >> $GITHUB_OUTPUT
           fi
 
+      - name: Slack not configured
+        if: env.SLACK_WEBHOOK_URL == ''
+        run: echo "::warning::SLACK_WEBHOOK_URL secret is not set; skipping the Slack notification"
+
       - name: Send Slack notification
-        if: always()
+        if: always() && env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
