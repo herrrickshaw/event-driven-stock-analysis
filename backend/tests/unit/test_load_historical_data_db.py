@@ -396,6 +396,8 @@ class TestValidateBoundaries:
 
         kept = f.validate_ohlcv(with_jump(1 + limit - 0.01), "A")
         assert len(kept) == m + 5
+        exactly_at_limit = f.validate_ohlcv(with_jump(1 + limit), "A")  # +500.0% is not "> 500%"
+        assert len(exactly_at_limit) == m + 5
         dropped = f.validate_ohlcv(with_jump(1 + limit + 0.01), "A")
         assert len(dropped) == m + 4  # only the spike bar itself
 
@@ -733,6 +735,18 @@ class TestMainCLI:
         assert (kw["markets"], kw["workers"], kw["batch_size"], kw["resume"]) == (["usa", "japan"], 8, 10, True)
         assert env.loaders[0].calls == [{"only_missing": True, "dry_run": True}]
         assert env.logging == [logging.DEBUG]
+
+    @pytest.mark.parametrize(
+        "flag,expected",
+        [
+            ("--dry-run", {"only_missing": False, "dry_run": True}),
+            ("--only-missing", {"only_missing": True, "dry_run": False}),
+        ],
+    )
+    def test_dry_run_and_only_missing_are_not_swapped(self, env, monkeypatch, flag, expected):
+        self.argv(monkeypatch, flag)
+        ldh.main()
+        assert env.loaders[0].calls == [expected]
 
     def test_validate_only_skips_loading_but_closes(self, env, monkeypatch):
         self.argv(monkeypatch, "--validate-only")
